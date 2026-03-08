@@ -61,9 +61,16 @@ export default function AdminStaffManagementPage({ onNavigate }: AdminStaffManag
 
   const fetchStaff = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/staff')
+      const token = localStorage.getItem('token')
+      const response = await fetch('http://localhost:5000/api/staff', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
       const data = await response.json()
-      const enhancedData = data.map((member: any) => ({
+      
+      const safeData = Array.isArray(data) ? data : []
+      const enhancedData = safeData.map((member: any) => ({
         ...member,
         degree: DEGREES[Math.floor(Math.random() * DEGREES.length)],
         assignedClasses: CLASSES.slice(Math.floor(Math.random() * 3), Math.floor(Math.random() * 3) + 3),
@@ -118,16 +125,23 @@ export default function AdminStaffManagementPage({ onNavigate }: AdminStaffManag
     }
 
     try {
+      const token = localStorage.getItem('token')
       if (editingId) {
         await fetch(`http://localhost:5000/api/staff/${editingId}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
           body: JSON.stringify(formData)
         })
       } else {
         await fetch('http://localhost:5000/api/staff', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
           body: JSON.stringify(formData)
         })
       }
@@ -142,8 +156,12 @@ export default function AdminStaffManagementPage({ onNavigate }: AdminStaffManag
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this staff member?')) {
       try {
+        const token = localStorage.getItem('token')
         await fetch(`http://localhost:5000/api/staff/${id}`, {
-          method: 'DELETE'
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
         })
         fetchStaff()
       } catch (error) {

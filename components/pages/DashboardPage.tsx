@@ -62,7 +62,7 @@ export default function DashboardPage({ onLogout, onNavigate }: DashboardPagePro
   const [drillDownType, setDrillDownType] = useState<'students' | 'staff' | 'admissions' | 'queries' | null>(null)
   const [isSyncing, setIsSyncing] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [widgetOrder, setWidgetOrder] = useState(['health', 'growth', 'retention', 'trust', 'teaching', 'performance'])
+  const [widgetOrder, setWidgetOrder] = useState(['health', 'growth', 'retention', 'trust', 'teaching', 'performance', 'student-achievements', 'operations', 'school-achievements', 'feedback'])
   const [healthData, setHealthData] = useState<any>(null)
 
   useEffect(() => {
@@ -213,6 +213,63 @@ export default function DashboardPage({ onLogout, onNavigate }: DashboardPagePro
               </div>
             </div>
             <StudentPerformanceOverview />
+          </section>
+        )
+      case 'student-achievements':
+        return (
+          <section key="student-achievements" className="space-y-6 px-2">
+            <div className="flex items-center gap-4 mb-2">
+              <div className="w-1.5 h-10 bg-yellow-500 rounded-full" />
+              <div>
+                <h3 className="text-2xl font-black tracking-tighter text-foreground uppercase italic px-1">Student Achievements & Competitions</h3>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] opacity-60">Academic and Extracurricular Excellence</p>
+              </div>
+            </div>
+            <StudentAchievements isEditable={false} />
+          </section>
+        )
+      case 'operations':
+        return (
+          <section key="operations" className="space-y-6 px-2">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-4">
+                <div className="w-1.5 h-10 bg-indigo-500 rounded-full" />
+                <div>
+                  <h3 className="text-2xl font-black tracking-tighter text-foreground uppercase italic px-1">Operations Analytics</h3>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] opacity-60">Admissions Pipeline & Staff Demographics</p>
+                </div>
+              </div>
+            </div>
+            <div className="grid gap-6 lg:grid-cols-2">
+              <AdmissionsAnalytics />
+              <StaffDetails />
+            </div>
+          </section>
+        )
+      case 'school-achievements':
+        return (
+          <section key="school-achievements" className="space-y-6 px-2">
+            <div className="flex items-center gap-4 mb-2">
+              <div className="w-1.5 h-10 bg-emerald-500 rounded-full" />
+              <div>
+                <h3 className="text-2xl font-black tracking-tighter text-foreground uppercase italic px-1">School Achievements</h3>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] opacity-60">Institutional Recognition & Milestones</p>
+              </div>
+            </div>
+            <Achievements />
+          </section>
+        )
+      case 'feedback':
+        return (
+          <section key="feedback" className="space-y-6 px-2">
+            <div className="flex items-center gap-4 mb-2">
+              <div className="w-1.5 h-10 bg-rose-500 rounded-full" />
+              <div>
+                <h3 className="text-2xl font-black tracking-tighter text-foreground uppercase italic px-1">Stakeholder Feedback</h3>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] opacity-60">Parent Queries & Satisfaction</p>
+              </div>
+            </div>
+            <ParentQueries />
           </section>
         )
       default: return null

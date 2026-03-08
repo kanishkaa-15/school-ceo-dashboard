@@ -40,11 +40,18 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  Phone,
+  Mail,
+  User,
+  GraduationCap as GradIcon,
+  BookOpen
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Switch } from '@/components/ui/switch'
 import { useToast } from '@/hooks/use-toast'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 interface Student {
   _id: string
@@ -59,6 +66,7 @@ interface Student {
 interface AttendanceRecord {
   studentName: string
   status: 'Present' | 'Absent'
+  date: string
 }
 
 const CLASSES = ['Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10', 'Class 11', 'Class 12']
@@ -81,6 +89,11 @@ export default function StaffDashboardPage({ onLogout }: { onLogout: () => void 
   const [recentStudentIds, setRecentStudentIds] = useState<Set<string>>(new Set())
   const [userContext, setUserContext] = useState<any>(null)
   const { toast } = useToast()
+  
+  // Student Edit Modal State
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
+  const [studentFormData, setStudentFormData] = useState<any>({})
+  const [updatingStudent, setUpdatingStudent] = useState(false)
 
   useEffect(() => {
     const user = localStorage.getItem('user')
@@ -279,6 +292,58 @@ export default function StaffDashboardPage({ onLogout }: { onLogout: () => void 
     }
   }
 
+  const handleStudentClick = async (student: Student) => {
+    try {
+      const token = localStorage.getItem('token')
+      const headers = { 'Authorization': `Bearer ${token}` }
+      // Fetch full admission details to edit
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
+      const res = await fetch(`${apiUrl}/admissions?studentName=${encodeURIComponent(student.studentName)}`, { headers })
+      const data = await res.json()
+      
+      const fullDetails = Array.isArray(data) ? data.find((d: any) => d.studentName === student.studentName) : null
+      
+      if (fullDetails) {
+        setSelectedStudent(student)
+        setStudentFormData(fullDetails)
+      } else {
+        toast({ title: "Error", description: "Could not find student details.", variant: "destructive" })
+      }
+    } catch (error) {
+      console.error('Error fetching student details:', error)
+    }
+  }
+
+  const handleUpdateStudent = async () => {
+    if (!selectedStudent || !studentFormData._id) return
+    setUpdatingStudent(true)
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${apiUrl}/admissions/${studentFormData._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(studentFormData)
+      })
+
+      if (response.ok) {
+        toast({ title: "Success", description: "Student profile updated successfully." })
+        setSelectedStudent(null)
+        fetchData()
+      } else {
+        throw new Error('Update failed')
+      }
+    } catch (error) {
+      console.error('Error updating student:', error)
+      toast({ title: "Update Failed", description: "Could not update student details.", variant: "destructive" })
+    } finally {
+      setUpdatingStudent(false)
+    }
+  }
+
   const getRiskColor = (status: string) => {
     switch (status) {
       case 'High': return 'text-red-500 bg-red-500/10 border-red-500/20'
@@ -454,7 +519,11 @@ export default function StaffDashboardPage({ onLogout }: { onLogout: () => void 
                           {studentListWithRisks.map((student, idx) => {
                             const studentGrades = grades.filter(g => g.studentName === student.studentName)
                             return (
-                              <TableRow key={student._id || `student-${idx}`} className="group border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
+                              <TableRow 
+                                key={student._id || `student-${idx}`} 
+                                className="group border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors cursor-pointer"
+                                onClick={() => handleStudentClick(student)}
+                              >
                                 <TableCell className="py-5 font-bold">
                                   <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-primary font-black group-hover:bg-primary group-hover:text-white transition-all">
@@ -543,7 +612,8 @@ export default function StaffDashboardPage({ onLogout }: { onLogout: () => void 
                             return (
                               <div
                                 key={student._id || `attendance-${idx}`}
-                                className={`p-4 rounded-2xl border transition-all duration-300 flex items-center justify-between group ${isPresent
+                                onClick={() => handleStudentClick(student)}
+                                className={`p-4 rounded-2xl border transition-all duration-300 flex items-center justify-between group cursor-pointer hover:border-primary/30 ${isPresent
                                   ? 'bg-emerald-500/5 border-emerald-500/20'
                                   : 'bg-rose-500/5 border-rose-500/20 shadow-lg shadow-rose-500/10'
                                   }`}
@@ -566,6 +636,7 @@ export default function StaffDashboardPage({ onLogout }: { onLogout: () => void 
 
                                 <Switch
                                   checked={isPresent}
+                                  onClick={(e) => e.stopPropagation()}
                                   onCheckedChange={(checked) => setAttendance(prev => ({
                                     ...prev,
                                     [(student.studentId || student.studentName)]: checked ? 'Present' : 'Absent'
@@ -584,6 +655,122 @@ export default function StaffDashboardPage({ onLogout }: { onLogout: () => void 
             </motion.div>
           </AnimatePresence>
         </Tabs>
+
+        {/* Student Edit & History Modal */}
+        <Dialog open={!!selectedStudent} onOpenChange={(open) => !open && setSelectedStudent(null)}>
+          <DialogContent className="max-w-2xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 p-0 overflow-hidden rounded-[2rem]">
+            <div className="p-8 space-y-8">
+              <DialogHeader>
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-black text-xl">
+                    {studentFormData.studentName?.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
+                  </div>
+                  <div>
+                    <DialogTitle className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                      {studentFormData.studentName}
+                    </DialogTitle>
+                    <DialogDescription className="text-xs font-bold uppercase tracking-widest mt-1 text-slate-500">
+                      ID: {studentFormData.studentId || 'N/A'} • {studentFormData.grade} Sec {studentFormData.section}
+                    </DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Edit Form */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">Profile Information</h4>
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase text-slate-500 flex items-center gap-1"><User className="w-3 h-3"/> Parent Name</label>
+                      <Input 
+                        value={studentFormData.parentName || ''} 
+                        onChange={e => setStudentFormData({...studentFormData, parentName: e.target.value})}
+                        className="h-9 bg-slate-50 dark:bg-slate-900 text-xs font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase text-slate-500 flex items-center gap-1"><Mail className="w-3 h-3"/> Email</label>
+                      <Input 
+                        value={studentFormData.email || ''} 
+                        onChange={e => setStudentFormData({...studentFormData, email: e.target.value})}
+                        className="h-9 bg-slate-50 dark:bg-slate-900 text-xs font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase text-slate-500 flex items-center gap-1"><Phone className="w-3 h-3"/> Phone</label>
+                      <Input 
+                        value={studentFormData.phone || ''} 
+                        onChange={e => setStudentFormData({...studentFormData, phone: e.target.value})}
+                        className="h-9 bg-slate-50 dark:bg-slate-900 text-xs font-bold"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase text-slate-500 flex items-center gap-1"><GraduationCap className="w-3 h-3"/> Class</label>
+                        <Select value={studentFormData.grade || ''} onValueChange={v => setStudentFormData({...studentFormData, grade: v})}>
+                          <SelectTrigger className="h-9 bg-slate-50 dark:bg-slate-900 text-xs font-bold"><SelectValue /></SelectTrigger>
+                          <SelectContent><ScrollArea className="h-[150px]">{CLASSES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</ScrollArea></SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase text-slate-500 flex items-center gap-1"><BookOpen className="w-3 h-3"/> Section</label>
+                        <Select value={studentFormData.section || ''} onValueChange={v => setStudentFormData({...studentFormData, section: v})}>
+                          <SelectTrigger className="h-9 bg-slate-50 dark:bg-slate-900 text-xs font-bold"><SelectValue /></SelectTrigger>
+                          <SelectContent>{SECTIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={handleUpdateStudent} 
+                    disabled={updatingStudent}
+                    className="w-full h-10 mt-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20"
+                  >
+                    {updatingStudent ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                    Save Changes
+                  </Button>
+                </div>
+
+                {/* Vertical Divider */}
+                <div className="hidden md:block w-px bg-slate-100 dark:bg-slate-800 absolute left-1/2 top-8 bottom-8" />
+
+                {/* Recent History */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">Recent Attendance Log</h4>
+                  <div className="space-y-2">
+                    {attendanceHistory
+                      .filter(a => a.studentName === studentFormData.studentName)
+                      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                      .slice(0, 3)
+                      .map((record, i) => (
+                        <div key={i} className="flex items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${record.status === 'Present' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                              <CalendarIcon className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold">{new Date(record.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+                              <p className="text-[9px] font-bold uppercase text-slate-400">Recorded Entry</p>
+                            </div>
+                          </div>
+                          <Badge variant="outline" className={`border-none ${record.status === 'Present' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-600'}`}>
+                            {record.status}
+                          </Badge>
+                        </div>
+                      ))}
+                    {attendanceHistory.filter(a => a.studentName === studentFormData.studentName).length === 0 && (
+                      <div className="p-8 text-center rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
+                        <CalendarIcon className="w-8 h-8 mx-auto text-slate-300 mb-2" />
+                        <p className="text-xs font-bold text-slate-400">No recent records found</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   )
