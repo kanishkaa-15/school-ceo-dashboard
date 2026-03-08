@@ -66,7 +66,7 @@ export default function AdminAdmissionsPage({ onNavigate }: AdminAdmissionsPageP
     try {
       const response = await fetch('http://localhost:5000/api/admissions')
       const data = await response.json()
-      setAdmissions(data)
+      setAdmissions(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error('Error fetching admissions:', error)
     } finally {

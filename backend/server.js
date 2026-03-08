@@ -4,6 +4,7 @@ const connectDB = require('./config/database');
 const { apiLimiter, sanitizeInput } = require('./middleware/security');
 // Initialize cron jobs later after Socket.io is ready
 require('dotenv').config();
+const { initExcelWatcher } = require('./scripts/excelWatcher');
 
 // Connect to MongoDB
 connectDB();
@@ -31,6 +32,7 @@ app.set('io', io);
 
 // Initialize services that need Socket.io
 require('./services/reportService').init(io);
+initExcelWatcher(io);
 
 // Socket.io connection logic
 io.on('connection', (socket) => {
@@ -61,6 +63,7 @@ app.use('/api/achievements', require('./routes/achievements'));
 app.use('/api/announcements', require('./routes/announcements'));
 app.use('/api/attendance', require('./routes/attendance'));
 app.use('/api/grades', require('./routes/grades'));
+app.use('/api/excel', require('./routes/excelRoutes'));
 
 // Health check
 app.get('/api/health', (req, res) => {

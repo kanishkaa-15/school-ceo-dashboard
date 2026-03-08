@@ -45,7 +45,9 @@ import {
   Mail,
   User,
   GraduationCap as GradIcon,
-  BookOpen
+  BookOpen,
+  FileSpreadsheet,
+  Upload
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Switch } from '@/components/ui/switch'
@@ -292,6 +294,48 @@ export default function StaffDashboardPage({ onLogout }: { onLogout: () => void 
     }
   }
 
+  const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const formData = new FormData()
+    formData.append('file', file)
+
+    setSaving(true)
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
+      const token = localStorage.getItem('token')
+      const res = await fetch(`${apiUrl}/excel/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      })
+
+      const result = await res.json()
+      if (res.ok) {
+        toast({
+          title: 'Import Success',
+          description: `Added: ${result.details.added}, Updated: ${result.details.updated}`,
+        })
+        fetchData()
+      } else {
+        throw new Error(result.message)
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Import Failed',
+        description: error.message || 'Failed to upload Excel file',
+        variant: 'destructive',
+      })
+    } finally {
+      setSaving(false)
+      // Reset input
+      e.target.value = ''
+    }
+  }
+
   const handleStudentClick = async (student: Student) => {
     try {
       const token = localStorage.getItem('token')
@@ -380,6 +424,27 @@ export default function StaffDashboardPage({ onLogout }: { onLogout: () => void 
             >
               Manual Sync
             </Button>
+            
+            <div className="relative">
+              <input
+                type="file"
+                id="excel-upload"
+                className="hidden"
+                accept=".xlsx,.xls,.csv"
+                onChange={handleExcelUpload}
+              />
+              <Button
+                onClick={() => document.getElementById('excel-upload')?.click()}
+                variant="outline"
+                size="sm"
+                className="rounded-full border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 text-[10px] font-bold uppercase"
+                disabled={saving}
+              >
+                {saving ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <FileSpreadsheet className="w-3 h-3 mr-2" />}
+                Import Excel
+              </Button>
+            </div>
+
             <Button
               onClick={onLogout}
               variant="ghost"

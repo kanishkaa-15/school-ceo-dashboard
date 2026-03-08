@@ -85,7 +85,7 @@ export default function StaffManagementPage({ onNavigate }: StaffManagementPageP
         }
       });
       const data = await response.json();
-      setStaff(data);
+      setStaff(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching staff:', error);
     } finally {

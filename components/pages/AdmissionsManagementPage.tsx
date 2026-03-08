@@ -82,7 +82,7 @@ export default function AdmissionsManagementPage({ onNavigate }: AdmissionsManag
         }
       });
       const data = await response.json();
-      setApplications(data);
+      setApplications(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching admissions:', error);
     } finally {

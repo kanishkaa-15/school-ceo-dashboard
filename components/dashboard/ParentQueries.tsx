@@ -38,7 +38,7 @@ export default function ParentQueries() {
         }
       })
       const data = await response.json()
-      setQueries(data)
+      setQueries(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error('Error fetching queries:', error)
     } finally {
