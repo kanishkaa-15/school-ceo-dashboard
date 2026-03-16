@@ -25,7 +25,11 @@ import {
   Search,
   Send,
   ArrowRight,
-  Clock
+  Clock,
+  CheckCircle2,
+  FileText,
+  UserCheck,
+  CreditCard
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -460,11 +464,11 @@ export default function ParentDashboardPage({ onLogout }: ParentDashboardProps) 
             <div className="lg:col-span-2 space-y-8">
               {/* Tabs Navigation */}
               <div className="flex items-center gap-1 p-1 bg-secondary/30 rounded-2xl w-fit border border-border/50">
-                {['overview', 'performance', 'reports'].map((tab) => (
+                {['overview', 'performance', 'reports', 'admissions'].map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab
+                    className={`px-4 md:px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab
                       ? 'bg-background text-primary shadow-sm border border-border/50'
                       : 'text-muted-foreground hover:text-foreground'
                       }`}
@@ -636,6 +640,90 @@ export default function ParentDashboardPage({ onLogout }: ParentDashboardProps) 
                     ))}
                   </motion.div>
                 )}
+
+                {activeTab === 'admissions' && (
+                  <motion.div
+                    key="admissions"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="space-y-6"
+                  >
+                    <Card className="bg-card border-border/50 shadow-sm relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mx-10 pointer-events-none" />
+                      <CardHeader>
+                        <CardTitle className="text-xl font-bold flex items-center gap-3">
+                          <div className="p-2 bg-primary/10 rounded-lg">
+                            <FileText className="w-5 h-5 text-primary" />
+                          </div>
+                          Smart Admissions Tracker
+                        </CardTitle>
+                        <CardDescription>Real-time enrollment workflow tracking</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        {!selectedStudent ? (
+                          <div className="text-center py-10 opacity-50">
+                            <p className="font-bold uppercase tracking-widest text-sm">No Active Student Selected</p>
+                          </div>
+                        ) : (
+                          <div className="relative border-l-2 border-border/50 ml-4 md:ml-10 space-y-12 pb-4">
+                            {/* Application Submitted Step */}
+                            <div className="relative pl-8 md:pl-12 group">
+                              <div className={`absolute -left-[17px] top-1 p-1.5 rounded-full border-4 border-background transition-colors ${selectedStudent.status !== 'Rejected' ? 'bg-primary text-white shadow-[0_0_15px_rgba(56,189,248,0.5)]' : 'bg-muted text-muted-foreground'}`}>
+                                <FileText className="w-4 h-4" />
+                              </div>
+                              <h4 className={`text-lg font-black tracking-tight ${selectedStudent.status !== 'Rejected' ? 'text-foreground' : 'text-muted-foreground'}`}>Application Submitted</h4>
+                              <p className="text-xs text-muted-foreground font-medium mt-1">Initial student data captured successfully.</p>
+                              <Badge className="mt-3 bg-secondary/50 text-foreground border-border/50 text-[10px] font-bold py-0.5">Automated Capture</Badge>
+                            </div>
+
+                            {/* Application Reviewed Step */}
+                            <div className="relative pl-8 md:pl-12 group">
+                              <div className={`absolute -left-[17px] top-1 p-1.5 rounded-full border-4 border-background transition-colors ${['Reviewed', 'Interview Scheduled', 'Approved', 'Waitlisted'].includes(selectedStudent.status) ? 'bg-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'bg-secondary text-muted-foreground'}`}>
+                                <UserCheck className="w-4 h-4" />
+                              </div>
+                              <h4 className={`text-lg font-black tracking-tight ${['Reviewed', 'Interview Scheduled', 'Approved', 'Waitlisted'].includes(selectedStudent.status) ? 'text-foreground' : 'text-muted-foreground opacity-60'}`}>Application Reviewed</h4>
+                              <p className="text-xs text-muted-foreground font-medium mt-1">Staff has reviewed academic credentials.</p>
+                            </div>
+
+                            {/* Outcome Step */}
+                            <div className="relative pl-8 md:pl-12 group">
+                              <div className={`absolute -left-[17px] top-1 p-1.5 rounded-full border-4 border-background transition-colors ${selectedStudent.status === 'Approved' ? 'bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.5)]' :
+                                  selectedStudent.status === 'Waitlisted' ? 'bg-amber-500 text-white' :
+                                    selectedStudent.status === 'Rejected' ? 'bg-red-500 text-white' :
+                                      'bg-secondary text-muted-foreground'
+                                }`}>
+                                {selectedStudent.status === 'Approved' ? <CheckCircle2 className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
+                              </div>
+                              <h4 className={`text-lg font-black tracking-tight ${selectedStudent.status === 'Approved' ? 'text-emerald-500' :
+                                  selectedStudent.status === 'Waitlisted' ? 'text-amber-500' :
+                                    selectedStudent.status === 'Rejected' ? 'text-red-500' :
+                                      'text-muted-foreground opacity-60'
+                                }`}>
+                                {selectedStudent.status === 'Approved' ? 'Admission Approved' :
+                                  selectedStudent.status === 'Waitlisted' ? 'Waitlisted' :
+                                    selectedStudent.status === 'Rejected' ? 'Application Rejected' :
+                                      'Awaiting Final Decision'}
+                              </h4>
+                              <p className="text-xs text-muted-foreground font-medium mt-1">
+                                {selectedStudent.status === 'Approved' ? 'Congratulations! Please proceed to fee payment.' :
+                                  selectedStudent.status === 'Waitlisted' ? 'Added to waitlist pool due to capacity constraints.' :
+                                    selectedStudent.status === 'Rejected' ? 'Sorry, we cannot offer a place at this time.' :
+                                      'School board is finalizing the enrollment capacity.'}
+                              </p>
+                              {selectedStudent.status === 'Approved' && (
+                                <Button className="mt-4 rounded-xl font-black text-[10px] uppercase tracking-widest gap-2">
+                                  <CreditCard className="w-3.5 h-3.5" />
+                                  Pay Enrollment Fees
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )}
               </AnimatePresence>
             </div>
 
@@ -737,21 +825,21 @@ export default function ParentDashboardPage({ onLogout }: ParentDashboardProps) 
                       </div>
                       <h3 className="font-bold text-foreground text-sm mb-2 group-hover:text-primary transition-colors">{query.subject}</h3>
                       <p className="text-xs text-muted-foreground line-clamp-2 font-medium mb-4 italic opacity-80">"{query.message}"</p>
-                        <div className="flex items-center justify-between border-t border-border/30 pt-4">
-                          <div className="flex items-center gap-1.5">
-                            <Clock className="w-3 h-3 text-muted-foreground" />
-                            <span className="text-[9px] font-black text-muted-foreground uppercase">{new Date(query.createdAt).toLocaleDateString()}</span>
-                          </div>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => setSelectedTicket(query)}
-                            className="h-7 px-2 text-[9px] font-black text-primary uppercase tracking-widest hover:bg-primary/5 transition-all flex items-center gap-1"
-                          >
-                            View Details
-                            <ArrowRight className="w-3 h-3" />
-                          </Button>
+                      <div className="flex items-center justify-between border-t border-border/30 pt-4">
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-[9px] font-black text-muted-foreground uppercase">{new Date(query.createdAt).toLocaleDateString()}</span>
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedTicket(query)}
+                          className="h-7 px-2 text-[9px] font-black text-primary uppercase tracking-widest hover:bg-primary/5 transition-all flex items-center gap-1"
+                        >
+                          View Details
+                          <ArrowRight className="w-3 h-3" />
+                        </Button>
+                      </div>
 
                       {query.response && (
                         <div className="mt-4 p-3 bg-primary/5 rounded-xl border border-primary/10">
@@ -816,7 +904,7 @@ export default function ParentDashboardPage({ onLogout }: ParentDashboardProps) 
                 </div>
               </div>
             )}
-            
+
             {!selectedTicket?.response && selectedTicket?.status !== 'Resolved' && (
               <div className="p-4 bg-amber-500/5 rounded-2xl border border-amber-500/20 flex items-center gap-3">
                 <Clock className="w-5 h-5 text-amber-500" />
@@ -826,7 +914,7 @@ export default function ParentDashboardPage({ onLogout }: ParentDashboardProps) 
           </div>
 
           <div className="mt-8">
-            <Button 
+            <Button
               onClick={() => setSelectedTicket(null)}
               className="w-full rounded-2xl py-6 h-auto font-black text-[10px] uppercase tracking-widest gap-2 bg-foreground text-background hover:bg-foreground/90 transition-all shadow-xl"
             >

@@ -16,9 +16,12 @@ import {
   Filter,
   RefreshCw,
   Search,
-  ChevronRight
+  ChevronRight,
+  History,
+  FastForward
 } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
@@ -41,6 +44,10 @@ import SentimentPulse from '@/components/dashboard/SentimentPulse'
 import StrategicRadar from '@/components/dashboard/StrategicRadar'
 import AIInsights from '@/components/dashboard/AIInsights'
 import EnrollmentForecast from '@/components/dashboard/EnrollmentForecast'
+import AtRiskStudentsWidget from '@/components/dashboard/AtRiskStudentsWidget'
+import CampusLeaderboardWidget from '@/components/dashboard/CampusLeaderboardWidget'
+import StaffBurnoutRadar from '@/components/dashboard/StaffBurnoutRadar'
+import CEOCopilot from '@/components/dashboard/CEOCopilot'
 
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -67,8 +74,11 @@ export default function DashboardPage({ onLogout, onNavigate }: DashboardPagePro
   const [drillDownType, setDrillDownType] = useState<'students' | 'staff' | 'admissions' | 'queries' | null>(null)
   const [isSyncing, setIsSyncing] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [widgetOrder, setWidgetOrder] = useState(['health', 'ai-briefing', 'growth-forecast', 'retention', 'trust', 'teaching', 'performance', 'student-achievements', 'operations', 'school-achievements', 'feedback', 'sentiment'])
+  const [widgetOrder, setWidgetOrder] = useState(['health', 'predictive-insights', 'burnout-radar', 'growth-forecast', 'retention', 'trust', 'teaching', 'performance', 'student-achievements', 'operations', 'school-achievements', 'feedback', 'sentiment'])
   const [healthData, setHealthData] = useState<any>(null)
+
+  // Chrono-Slider State (-6 to +6 months)
+  const [timeOffset, setTimeOffset] = useState([0])
 
   useEffect(() => {
     // Socket.io Connection
@@ -119,15 +129,19 @@ export default function DashboardPage({ onLogout, onNavigate }: DashboardPagePro
   }
 
   const filteredStats = useMemo(() => {
+    // Chrono-Adjustment multiplier
+    const offset = timeOffset[0]
+    const multiplier = 1 + (offset * 0.05) // ±5% change per month offset
+
     const baseStats = [
-      { id: 'students' as const, label: 'Total Students', value: studentsCount, icon: GraduationCap, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-      { id: 'staff' as const, label: 'Total Staff', value: staff.length, icon: Users, color: 'text-purple-500', bg: 'bg-purple-100/10' },
-      { id: 'admissions' as const, label: 'Admissions', value: admissions.length, icon: BookOpen, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-      { id: 'queries' as const, label: 'Open Queries', value: queries.filter(q => q.status === 'Open').length, icon: MessageSquare, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+      { id: 'students' as const, label: 'Total Students', value: Math.floor(studentsCount * multiplier), icon: GraduationCap, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+      { id: 'staff' as const, label: 'Total Staff', value: Math.floor(staff.length * (1 + (offset * 0.02))), icon: Users, color: 'text-purple-500', bg: 'bg-purple-100/10' },
+      { id: 'admissions' as const, label: 'Admissions', value: Math.floor(admissions.length * (1 + (offset * 0.08))), icon: BookOpen, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+      { id: 'queries' as const, label: 'Open Queries', value: Math.max(0, Math.floor(queries.filter(q => q.status === 'Open').length * (1 + (offset * -0.1)))), icon: MessageSquare, color: 'text-amber-500', bg: 'bg-amber-500/10' },
     ]
     if (!searchQuery) return baseStats
     return baseStats.filter(s => s.label.toLowerCase().includes(searchQuery.toLowerCase()))
-  }, [searchQuery, studentsCount, staff, admissions, queries])
+  }, [searchQuery, studentsCount, staff, admissions, queries, timeOffset])
 
   // Quantum Results (Entities)
   const quantumResults = useMemo(() => {
@@ -192,14 +206,14 @@ export default function DashboardPage({ onLogout, onNavigate }: DashboardPagePro
           </section>
         )
       case 'growth': return null // Combined in health for layout
-      case 'ai-briefing':
+      case 'predictive-insights':
         return (
-          <section key="ai-briefing" className="space-y-6">
+          <section key="predictive-insights" className="space-y-6">
             <div className="flex items-center gap-4 mb-4">
               <div className="w-1.5 h-10 bg-slate-900 rounded-full" />
               <div>
                 <h3 className="text-2xl font-black tracking-tighter text-foreground uppercase italic leading-none">Tactical Oversight</h3>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] opacity-60 mt-1">AI Anomalies & Insights</p>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] opacity-60 mt-1">AI Anomalies, Risk Warnings & Branch Parity</p>
               </div>
             </div>
             <AIInsights stats={{
@@ -208,6 +222,23 @@ export default function DashboardPage({ onLogout, onNavigate }: DashboardPagePro
               pendingQueries: queries.filter(q => q.status === 'Open').length,
               sentimentTrend: 'Improving'
             }} />
+            <div className="grid gap-6 lg:grid-cols-2 mt-6">
+              <AtRiskStudentsWidget />
+              <CampusLeaderboardWidget />
+            </div>
+          </section>
+        )
+      case 'burnout-radar':
+        return (
+          <section key="burnout-radar" className="space-y-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-1.5 h-10 bg-rose-500 rounded-full" />
+              <div>
+                <h3 className="text-2xl font-black tracking-tighter text-foreground uppercase italic leading-none">HR Predictive Matrix</h3>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] opacity-60 mt-1">Staff Attrition & Burnout Velocity</p>
+              </div>
+            </div>
+            <StaffBurnoutRadar />
           </section>
         )
       case 'growth-forecast':
@@ -419,6 +450,39 @@ export default function DashboardPage({ onLogout, onNavigate }: DashboardPagePro
                 )}
               </AnimatePresence>
             </div>
+
+            {/* Chrono-Slider (Time Travel Mode) */}
+            <div className="flex-1 max-w-sm px-4 py-2 bg-white/5 dark:bg-slate-950/40 border border-white/5 dark:border-slate-800/50 rounded-2xl hidden lg:flex flex-col gap-1 relative overflow-hidden group/chrono">
+              {timeOffset[0] !== 0 && (
+                <div className={`absolute inset-0 opacity-20 transition-all ${timeOffset[0] < 0 ? 'bg-amber-500' : 'bg-primary'}`} />
+              )}
+              <div className="flex items-center justify-between relative z-10 w-full">
+                <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-muted-foreground group-hover/chrono:text-foreground transition-colors">
+                  <History className={`w-3 h-3 ${timeOffset[0] < 0 ? 'text-amber-500' : ''}`} />
+                  <span className={timeOffset[0] < 0 ? 'text-amber-500' : ''}>Historical</span>
+                </span>
+
+                <Badge variant="outline" className={`text-[10px] font-black uppercase tracking-widest ${timeOffset[0] === 0 ? 'bg-white/10 text-white' :
+                    timeOffset[0] < 0 ? 'bg-amber-500/20 text-amber-500 border-amber-500/30' :
+                      'bg-primary/20 text-primary border-primary/30'
+                  } border-none shadow-inner`}>
+                  {timeOffset[0] === 0 ? 'Present-Time' : timeOffset[0] < 0 ? `${Math.abs(timeOffset[0])} Months Past` : `+${timeOffset[0]} Months Future`}
+                </Badge>
+
+                <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-muted-foreground group-hover/chrono:text-foreground transition-colors">
+                  <span className={timeOffset[0] > 0 ? 'text-primary' : ''}>Predictive</span>
+                  <FastForward className={`w-3 h-3 ${timeOffset[0] > 0 ? 'text-primary' : ''}`} />
+                </span>
+              </div>
+              <Slider
+                value={timeOffset}
+                onValueChange={setTimeOffset}
+                min={-6}
+                max={6}
+                step={1}
+                className="w-full relative z-10 py-1"
+              />
+            </div>
           </div>
 
           <div className="flex items-center gap-4">
@@ -462,7 +526,9 @@ export default function DashboardPage({ onLogout, onNavigate }: DashboardPagePro
         </div>
 
         {/* Dashboard content */}
-        <main className="flex-1 overflow-auto bg-[#F8FAFC] dark:bg-[#020617] relative">
+        <main className={`flex-1 overflow-auto bg-[#F8FAFC] dark:bg-[#020617] relative transition-all duration-1000 ${timeOffset[0] < 0 ? 'sepia-[0.3] grayscale-[0.2]' : // Past visual effect
+            timeOffset[0] > 0 ? 'hue-rotate-15 contrast-125 saturate-150 shadow-[inset_0_0_150px_rgba(56,189,248,0.1)]' : '' // Future visual effect
+          }`}>
           {/* Subtle Background Gradients */}
           <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-20">
             <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 rounded-full blur-[120px]" />
@@ -625,6 +691,9 @@ export default function DashboardPage({ onLogout, onNavigate }: DashboardPagePro
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* CEO Copilot AI Assistant */}
+      <CEOCopilot />
     </div>
   )
 }

@@ -20,7 +20,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Search, Filter, Menu, Plus, Edit2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Search, Filter, Menu, Plus, Edit2, CheckSquare, XCircle, Trash2 } from 'lucide-react';
 import Sidebar from '@/components/dashboard/Sidebar';
 import CEOSidebar from '@/components/dashboard/CEOSidebar';
 import {
@@ -47,7 +48,7 @@ interface AdmissionApplication {
 }
 
 interface AdmissionsManagementPageProps {
-  onNavigate: (page: 'dashboard' | 'staff' | 'admissions' | 'queries' | 'admin' | 'student-performance') => void
+  onNavigate: (page: 'dashboard' | 'staff' | 'admissions' | 'queries' | 'admin' | 'admin-audit' | 'student-performance') => void
 }
 
 export default function AdmissionsManagementPage({ onNavigate }: AdmissionsManagementPageProps) {
@@ -60,6 +61,7 @@ export default function AdmissionsManagementPage({ onNavigate }: AdmissionsManag
   const [openDialog, setOpenDialog] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<AdmissionApplication>>({});
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Detect user role from localStorage
   const [userRole, setUserRole] = useState<string>('admin');
@@ -161,7 +163,7 @@ export default function AdmissionsManagementPage({ onNavigate }: AdmissionsManag
       if (editingId) {
         await fetch(`${API_URL}/admissions/${editingId}`, {
           method: 'PUT',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
@@ -170,7 +172,7 @@ export default function AdmissionsManagementPage({ onNavigate }: AdmissionsManag
       } else {
         await fetch(`${API_URL}/admissions`, {
           method: 'POST',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
@@ -199,6 +201,57 @@ export default function AdmissionsManagementPage({ onNavigate }: AdmissionsManag
       } catch (error) {
         console.error('Error deleting application:', error)
       }
+    }
+  }
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(filteredApplications.map(a => a._id));
+    } else {
+      setSelectedIds([]);
+    }
+  }
+
+  const toggleSelection = (id: string, checked: boolean) => {
+    if (checked) {
+      setSelectedIds(prev => [...prev, id]);
+    } else {
+      setSelectedIds(prev => prev.filter(selectedId => selectedId !== id));
+    }
+  }
+
+  const handleBulkAction = async (action: 'Approved' | 'Rejected' | 'Delete') => {
+    if (selectedIds.length === 0) return;
+
+    const actionText = action === 'Delete' ? 'delete' : `mark as ${action}`;
+    if (!confirm(`Are you sure you want to ${actionText} ${selectedIds.length} applications?`)) return;
+
+    try {
+      const token = localStorage.getItem('token');
+
+      await Promise.all(selectedIds.map(id => {
+        if (action === 'Delete') {
+          return fetch(`${API_URL}/admissions/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+        } else {
+          return fetch(`${API_URL}/admissions/${id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ status: action })
+          });
+        }
+      }));
+
+      setSelectedIds([]);
+      fetchAdmissions();
+    } catch (error) {
+      console.error(`Error in bulk ${action}:`, error);
+      alert('Bulk action failed partially or completely.');
     }
   }
 
@@ -481,6 +534,30 @@ export default function AdmissionsManagementPage({ onNavigate }: AdmissionsManag
                   </div>
                 </div>
 
+                {/* Bulk Actions Toolbar */}
+                {selectedIds.length > 0 && userRole !== 'ceo' && (
+                  <div className="mb-4 flex items-center justify-between bg-primary/5 border border-primary/20 rounded-xl p-3 shadow-inner">
+                    <div className="flex items-center gap-3">
+                      <Badge className="bg-primary text-primary-foreground font-black px-3 py-1 text-[10px] tracking-widest uppercase">
+                        {selectedIds.length} Selected
+                      </Badge>
+                      <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Perform Action:</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" onClick={() => handleBulkAction('Approved')} className="border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 gap-2 text-[10px] font-black uppercase tracking-widest h-8">
+                        <CheckSquare className="w-3.5 h-3.5" /> Approve
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleBulkAction('Rejected')} className="border-amber-500/30 text-amber-600 hover:bg-amber-500/10 gap-2 text-[10px] font-black uppercase tracking-widest h-8">
+                        <XCircle className="w-3.5 h-3.5" /> Reject
+                      </Button>
+                      <div className="w-px h-4 bg-border/50" />
+                      <Button variant="destructive" size="sm" onClick={() => handleBulkAction('Delete')} className="gap-2 text-[10px] font-black uppercase tracking-widest h-8">
+                        <Trash2 className="w-3.5 h-3.5" /> Delete
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="mb-4 text-sm text-muted-foreground">
                   Showing {filteredApplications.length} of {applications.length} applications
                 </div>
@@ -489,6 +566,14 @@ export default function AdmissionsManagementPage({ onNavigate }: AdmissionsManag
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-secondary">
+                        {userRole !== 'ceo' && (
+                          <TableHead className="w-12 text-center">
+                            <Checkbox
+                              checked={selectedIds.length === filteredApplications.length && filteredApplications.length > 0}
+                              onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                            />
+                          </TableHead>
+                        )}
                         <TableHead>Student Name</TableHead>
                         <TableHead>Parent Name</TableHead>
                         <TableHead>Grade</TableHead>
@@ -503,7 +588,15 @@ export default function AdmissionsManagementPage({ onNavigate }: AdmissionsManag
                     <TableBody>
                       {filteredApplications.length > 0 ? (
                         filteredApplications.map(app => (
-                          <TableRow key={app._id}>
+                          <TableRow key={app._id} className={selectedIds.includes(app._id) ? 'bg-primary/5' : ''}>
+                            {userRole !== 'ceo' && (
+                              <TableCell className="text-center">
+                                <Checkbox
+                                  checked={selectedIds.includes(app._id)}
+                                  onCheckedChange={(checked) => toggleSelection(app._id, !!checked)}
+                                />
+                              </TableCell>
+                            )}
                             <TableCell className="font-medium">{app.studentName}</TableCell>
                             <TableCell>{app.parentName}</TableCell>
                             <TableCell>{app.grade}</TableCell>

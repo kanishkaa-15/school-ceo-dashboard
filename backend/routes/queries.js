@@ -29,13 +29,13 @@ router.get('/:id', protect, async (req, res) => {
 const calculateSentiment = (text) => {
   const negativeWords = ['bad', 'error', 'issue', 'problem', 'fail', 'concern', 'disappointed', 'late', 'rude', 'missing', 'broke', 'broken', 'poor', 'worst', 'unhappy', 'not good'];
   const positiveWords = ['great', 'good', 'excellent', 'happy', 'thanks', 'thank you', 'amazing', 'perfect', 'love', 'best', 'satisfied', 'wonderful', 'appreciate'];
-  
+
   const lowerText = text.toLowerCase();
   let score = 0;
-  
+
   negativeWords.forEach(word => { if (lowerText.includes(word)) score--; });
   positiveWords.forEach(word => { if (lowerText.includes(word)) score++; });
-  
+
   if (score < 0) return 'Concerned';
   if (score > 0) return 'Positive';
   return 'Neutral';
@@ -46,7 +46,7 @@ router.post('/', async (req, res) => {
   try {
     const { subject, message } = req.body;
     const sentiment = calculateSentiment(`${subject} ${message}`);
-    
+
     const query = new Query({
       ...req.body,
       sentiment
@@ -68,9 +68,23 @@ router.post('/', async (req, res) => {
 // PUT update query (Protected)
 router.put('/:id', protect, rbac(['ceo', 'admin']), async (req, res) => {
   try {
-    const query = await Query.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!query) return res.status(404).json({ message: 'Query not found' });
-    
+    const existingQuery = await Query.findById(req.params.id);
+    if (!existingQuery) return res.status(404).json({ message: 'Query not found' });
+
+    let updateData = { ...req.body };
+
+    // SLA Tracking Logic
+    if (req.body.status === 'Resolved' && existingQuery.status !== 'Resolved') {
+      updateData.resolvedAt = new Date();
+      const createdTime = new Date(existingQuery.createdAt).getTime();
+      const resolvedTime = updateData.resolvedAt.getTime();
+      // Calculate hours difference
+      updateData.slaDurationHours = Math.round((resolvedTime - createdTime) / (1000 * 60 * 60));
+    }
+
+    const query = await Query.findByIdAndUpdate(req.params.id, updateData, { new: true });
+
+
     // Emit real-time update event
     const io = req.app.get('io');
     if (io) {

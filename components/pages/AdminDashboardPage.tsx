@@ -1,7 +1,8 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { GraduationCap, LogOut, Menu } from 'lucide-react'
+import { GraduationCap, LogOut, Menu, Target } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { useState } from 'react'
 import AdmissionsAnalytics from '@/components/dashboard/AdmissionsAnalytics'
 import StaffDetails from '@/components/dashboard/StaffDetails'
@@ -15,14 +16,19 @@ import TeachingEffectiveness from '@/components/dashboard/TeachingEffectiveness'
 import StudentPerformanceOverview from '@/components/dashboard/StudentPerformanceOverview'
 import Achievements from '@/components/dashboard/Achievements'
 import StudentAchievements from '@/components/dashboard/StudentAchievements'
+import { NeuralPulse } from '@/components/dashboard/NeuralPulse'
+import { InterventionSimulator } from '@/components/dashboard/InterventionSimulator'
 
 interface AdminDashboardPageProps {
-  onNavigate: (page: 'dashboard' | 'staff' | 'admissions' | 'queries' | 'admin' | 'admin-staff' | 'admin-admissions' | 'admin-queries' | 'admin-staff-management' | 'student-performance') => void
+  onNavigate: (page: 'dashboard' | 'staff' | 'admissions' | 'queries' | 'admin' | 'admin-staff' | 'admin-admissions' | 'admin-queries' | 'admin-staff-management' | 'student-performance' | 'admin-audit') => void
   onLogout?: () => void
 }
 
 export default function AdminDashboardPage({ onNavigate, onLogout }: AdminDashboardPageProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [healthData, setHealthData] = useState<any>(null)
+  const [projection, setProjection] = useState({ growthImpact: '0.0', sentimentShift: 'Stable', status: 'Neutral' })
+  const [isBriefLoading, setIsBriefLoading] = useState(false)
 
   return (
     <div className="flex h-screen bg-background overflow-hidden font-sans">
@@ -85,6 +91,38 @@ export default function AdminDashboardPage({ onNavigate, onLogout }: AdminDashbo
                 <p className="text-white/60 text-lg font-bold leading-relaxed max-w-xl">
                   Full command over institutional operations, staff management, and admissions velocity.
                 </p>
+                <div className="flex items-center gap-4 pt-4">
+                  <Button
+                    disabled={isBriefLoading}
+                    onClick={async () => {
+                      try {
+                        setIsBriefLoading(true)
+                        const token = localStorage.getItem('token')
+                        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/analytics/morning-brief`, {
+                          headers: { 'Authorization': `Bearer ${token}` }
+                        })
+                        if (res.ok) {
+                          const blob = await res.blob()
+                          const url = window.URL.createObjectURL(blob)
+                          const a = document.createElement('a')
+                          a.href = url
+                          a.download = `CEO_Morning_Brief_${new Date().toISOString().split('T')[0]}.pdf`
+                          document.body.appendChild(a)
+                          a.click()
+                          window.URL.revokeObjectURL(url)
+                          document.body.removeChild(a)
+                        }
+                      } catch (err) {
+                        console.error('Failed to download brief', err)
+                      } finally {
+                        setIsBriefLoading(false)
+                      }
+                    }}
+                    className="rounded-2xl h-12 px-8 font-black uppercase text-xs tracking-widest bg-emerald-500 hover:bg-emerald-600 text-white shadow-xl shadow-emerald-500/20 transition-all hover:scale-105 disabled:opacity-50"
+                  >
+                    {isBriefLoading ? "Generating Brief..." : "Generate Morning Briefing"}
+                  </Button>
+                </div>
               </div>
             </div>
 
@@ -97,9 +135,15 @@ export default function AdminDashboardPage({ onNavigate, onLogout }: AdminDashbo
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] opacity-60">Real-time health telemetry</p>
                 </div>
               </div>
-              <div className="grid gap-8 lg:grid-cols-2">
+              <div className="grid gap-8 lg:grid-cols-3">
                 <div className="p-2 rounded-[2rem] hover:bg-white/5 dark:hover:bg-slate-900/20 transition-all border border-transparent hover:border-white/5">
-                  <InstitutionalHealthIndex onDataLoad={() => {}} />
+                  <NeuralPulse
+                    score={healthData?.currentHealth?.overall || 88}
+                    sentiment={healthData?.currentHealth?.riskLevel === 'LOW' ? 'Positive' : healthData?.currentHealth?.riskLevel === 'MEDIUM' ? 'Neutral' : 'Concerned'}
+                  />
+                </div>
+                <div className="p-2 rounded-[2rem] hover:bg-white/5 dark:hover:bg-slate-900/20 transition-all border border-transparent hover:border-white/5">
+                  <InstitutionalHealthIndex onDataLoad={setHealthData} />
                 </div>
                 <div className="p-2 rounded-[2rem] hover:bg-white/5 dark:hover:bg-slate-900/20 transition-all border border-transparent hover:border-white/5">
                   <LearningOutcomeGrowth />
@@ -126,19 +170,63 @@ export default function AdminDashboardPage({ onNavigate, onLogout }: AdminDashbo
               </div>
             </section>
 
-            {/* Teaching & Staff Performance */}
+            {/* Strategic Forecasting */}
             <section className="space-y-6">
               <div className="flex items-center gap-4 mb-2">
-                <div className="w-1.5 h-10 bg-purple-500 rounded-full" />
+                <div className="w-1.5 h-10 bg-amber-500 rounded-full shadow-[0_0_15px_rgba(245,158,11,0.5)]" />
                 <div>
-                  <h3 className="text-2xl font-black tracking-tighter text-foreground uppercase italic px-1">Teaching & Staff Performance</h3>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] opacity-60">Educator Effectiveness Metrics</p>
+                  <h3 className="text-2xl font-black tracking-tighter text-foreground uppercase italic px-1">Strategic Forecasting</h3>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] opacity-60">Predictive Intervention Modeling</p>
                 </div>
               </div>
-              <div className="p-2 rounded-[2rem] hover:bg-white/5 dark:hover:bg-slate-900/20 transition-all border border-transparent hover:border-white/5">
-                <TeachingEffectiveness />
+              <div className="grid gap-8 lg:grid-cols-2">
+                <InterventionSimulator
+                  currentAttendance={healthData?.currentHealth?.efficiency || 85}
+                  currentProficiency={healthData?.currentHealth?.academic || 72}
+                  onChange={setProjection}
+                />
+                <div className="bg-slate-950 rounded-[2.5rem] p-8 border border-white/5 flex flex-col justify-center relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-6 opacity-20 group-hover:opacity-40 transition-opacity">
+                    <Target className="w-12 h-12 text-primary" />
+                  </div>
+                  <h4 className="text-xl font-black text-white italic uppercase mb-2 relative z-10 flex items-center gap-2">
+                    Strategic Impact Engine
+                    <Badge className="bg-primary text-white text-[8px] px-2 py-0">LIVE</Badge>
+                  </h4>
+                  <p className="text-slate-400 text-sm font-medium leading-relaxed mb-6 relative z-10">
+                    Projected results based on your target intervention metrics:
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-4 relative z-10">
+                    <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
+                      <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Status Code</p>
+                      <p className="text-lg font-black text-primary italic uppercase">{projection.status}</p>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
+                      <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Market Sentiment</p>
+                      <p className="text-lg font-black text-emerald-500 italic uppercase">{projection.sentimentShift}</p>
+                    </div>
+                  </div>
+
+                  <p className="mt-6 text-[11px] text-slate-500 font-bold italic border-l-2 border-primary pl-4">
+                    {Number(projection.growthImpact) > 5
+                      ? "ALERT: High velocity growth detected. Recommend immediate staff allocation."
+                      : "ADVISORY: Incremental gains expected. Maintain current operational posture."}
+                  </p>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => alert('Strategic scenario archived in audit ledger.')}
+                    className="mt-6 w-fit rounded-xl border border-white/10 text-white/40 hover:text-white text-[9px] font-black uppercase tracking-widest"
+                  >
+                    Archive Scenario
+                  </Button>
+                </div>
               </div>
             </section>
+
+            {/* Teaching & Staff Performance */}
 
             {/* Academic Performance */}
             <section className="space-y-6">
@@ -180,27 +268,27 @@ export default function AdminDashboardPage({ onNavigate, onLogout }: AdminDashbo
                 </div>
                 {/* Modern Action Buttons */}
                 <div className="flex flex-wrap items-center gap-3">
-                  <Button 
+                  <Button
                     onClick={() => onNavigate('admin-staff-management')}
                     className="rounded-2xl h-10 px-5 font-black uppercase text-[10px] tracking-widest bg-indigo-500 hover:bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 transition-all hover:scale-105"
                   >
                     Staff Directory
                   </Button>
-                  <Button 
+                  <Button
                     variant="outline"
                     onClick={() => onNavigate('admin-admissions')}
                     className="rounded-2xl h-10 px-5 font-black uppercase text-[10px] tracking-widest border-indigo-500/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10 transition-all"
                   >
                     Admissions
                   </Button>
-                  <Button 
+                  <Button
                     variant="outline"
                     onClick={() => onNavigate('staff')}
                     className="rounded-2xl h-10 px-5 font-black uppercase text-[10px] tracking-widest border-indigo-500/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10 transition-all"
                   >
                     My Staff View
                   </Button>
-                  <Button 
+                  <Button
                     variant="outline"
                     onClick={() => onNavigate('queries')}
                     className="rounded-2xl h-10 px-5 font-black uppercase text-[10px] tracking-widest border-indigo-500/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10 transition-all"
@@ -246,7 +334,7 @@ export default function AdminDashboardPage({ onNavigate, onLogout }: AdminDashbo
                 <ParentQueries />
               </div>
             </section>
-            
+
           </div>
         </main>
       </div>

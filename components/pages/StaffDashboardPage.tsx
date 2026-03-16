@@ -48,7 +48,8 @@ import {
   GraduationCap as GradIcon,
   BookOpen,
   FileSpreadsheet,
-  Upload
+  Upload,
+  Download
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Switch } from '@/components/ui/switch'
@@ -92,7 +93,7 @@ export default function StaffDashboardPage({ onLogout }: { onLogout: () => void 
   const [recentStudentIds, setRecentStudentIds] = useState<Set<string>>(new Set())
   const [userContext, setUserContext] = useState<any>(null)
   const { toast } = useToast()
-  
+
   // Student Edit Modal State
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
   const [studentFormData, setStudentFormData] = useState<any>({})
@@ -296,6 +297,33 @@ export default function StaffDashboardPage({ onLogout }: { onLogout: () => void 
     }
   }
 
+  const handleDownloadClassReport = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      const res = await fetch(`${API_URL}/analytics/class-report?grade=${encodeURIComponent(selectedClass)}&section=${encodeURIComponent(selectedSection)}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+
+      if (res.ok) {
+        const blob = await res.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `Class_Report_${selectedClass}_${selectedSection}.xlsx`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+        toast({ title: 'Success', description: 'Class report downloaded successfully' })
+      } else {
+        const error = await res.json()
+        throw new Error(error.message || 'Download failed')
+      }
+    } catch (error: any) {
+      toast({ title: 'Download Failed', description: error.message, variant: 'destructive' })
+    }
+  }
+
   const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -344,7 +372,7 @@ export default function StaffDashboardPage({ onLogout }: { onLogout: () => void 
       // Fetch full admission details to edit by _id for precision
       const res = await fetch(`${API_URL}/admissions/${student._id}`, { headers })
       const fullDetails = await res.json()
-      
+
       if (res.ok && fullDetails) {
         setSelectedStudent(student)
         setStudentFormData(fullDetails)
@@ -421,7 +449,7 @@ export default function StaffDashboardPage({ onLogout }: { onLogout: () => void 
             >
               Manual Sync
             </Button>
-            
+
             <div className="relative">
               <input
                 type="file"
@@ -441,6 +469,16 @@ export default function StaffDashboardPage({ onLogout }: { onLogout: () => void 
                 Import Excel
               </Button>
             </div>
+
+            <Button
+              onClick={handleDownloadClassReport}
+              variant="outline"
+              size="sm"
+              className="rounded-full border-emerald-500/20 bg-emerald-500/5 text-emerald-600 hover:bg-emerald-500/10 text-[10px] font-bold uppercase"
+            >
+              <Download className="w-3 h-3 mr-2" />
+              Class Report
+            </Button>
 
             <Button
               onClick={onLogout}
@@ -581,8 +619,8 @@ export default function StaffDashboardPage({ onLogout }: { onLogout: () => void 
                           {studentListWithRisks.map((student, idx) => {
                             const studentGrades = grades.filter(g => g.studentName === student.studentName)
                             return (
-                              <TableRow 
-                                key={student._id || `student-${idx}`} 
+                              <TableRow
+                                key={student._id || `student-${idx}`}
                                 className="group border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors cursor-pointer"
                                 onClick={() => handleStudentClick(student)}
                               >
@@ -744,48 +782,48 @@ export default function StaffDashboardPage({ onLogout }: { onLogout: () => void 
                   <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">Profile Information</h4>
                   <div className="space-y-3">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold uppercase text-slate-500 flex items-center gap-1"><User className="w-3 h-3"/> Parent Name</label>
-                      <Input 
-                        value={studentFormData.parentName || ''} 
-                        onChange={e => setStudentFormData({...studentFormData, parentName: e.target.value})}
+                      <label className="text-[10px] font-bold uppercase text-slate-500 flex items-center gap-1"><User className="w-3 h-3" /> Parent Name</label>
+                      <Input
+                        value={studentFormData.parentName || ''}
+                        onChange={e => setStudentFormData({ ...studentFormData, parentName: e.target.value })}
                         className="h-9 bg-slate-50 dark:bg-slate-900 text-xs font-bold"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold uppercase text-slate-500 flex items-center gap-1"><Mail className="w-3 h-3"/> Email</label>
-                      <Input 
-                        value={studentFormData.email || ''} 
-                        onChange={e => setStudentFormData({...studentFormData, email: e.target.value})}
+                      <label className="text-[10px] font-bold uppercase text-slate-500 flex items-center gap-1"><Mail className="w-3 h-3" /> Email</label>
+                      <Input
+                        value={studentFormData.email || ''}
+                        onChange={e => setStudentFormData({ ...studentFormData, email: e.target.value })}
                         className="h-9 bg-slate-50 dark:bg-slate-900 text-xs font-bold"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold uppercase text-slate-500 flex items-center gap-1"><Phone className="w-3 h-3"/> Phone</label>
-                      <Input 
-                        value={studentFormData.phone || ''} 
-                        onChange={e => setStudentFormData({...studentFormData, phone: e.target.value})}
+                      <label className="text-[10px] font-bold uppercase text-slate-500 flex items-center gap-1"><Phone className="w-3 h-3" /> Phone</label>
+                      <Input
+                        value={studentFormData.phone || ''}
+                        onChange={e => setStudentFormData({ ...studentFormData, phone: e.target.value })}
                         className="h-9 bg-slate-50 dark:bg-slate-900 text-xs font-bold"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold uppercase text-slate-500 flex items-center gap-1"><GraduationCap className="w-3 h-3"/> Class</label>
-                        <Select value={studentFormData.grade || ''} onValueChange={v => setStudentFormData({...studentFormData, grade: v})}>
+                        <label className="text-[10px] font-bold uppercase text-slate-500 flex items-center gap-1"><GraduationCap className="w-3 h-3" /> Class</label>
+                        <Select value={studentFormData.grade || ''} onValueChange={v => setStudentFormData({ ...studentFormData, grade: v })}>
                           <SelectTrigger className="h-9 bg-slate-50 dark:bg-slate-900 text-xs font-bold"><SelectValue /></SelectTrigger>
                           <SelectContent><ScrollArea className="h-[150px]">{CLASSES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</ScrollArea></SelectContent>
                         </Select>
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold uppercase text-slate-500 flex items-center gap-1"><BookOpen className="w-3 h-3"/> Section</label>
-                        <Select value={studentFormData.section || ''} onValueChange={v => setStudentFormData({...studentFormData, section: v})}>
+                        <label className="text-[10px] font-bold uppercase text-slate-500 flex items-center gap-1"><BookOpen className="w-3 h-3" /> Section</label>
+                        <Select value={studentFormData.section || ''} onValueChange={v => setStudentFormData({ ...studentFormData, section: v })}>
                           <SelectTrigger className="h-9 bg-slate-50 dark:bg-slate-900 text-xs font-bold"><SelectValue /></SelectTrigger>
                           <SelectContent>{SECTIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                         </Select>
                       </div>
                     </div>
                   </div>
-                  <Button 
-                    onClick={handleUpdateStudent} 
+                  <Button
+                    onClick={handleUpdateStudent}
                     disabled={updatingStudent}
                     className="w-full h-10 mt-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20"
                   >

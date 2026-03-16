@@ -19,7 +19,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Plus, Edit2, Trash2, Menu, Users } from 'lucide-react'
+import { Checkbox } from '@/components/ui/checkbox'
+import { ArrowLeft, Plus, Edit2, Trash2, Menu, Users, CheckSquare } from 'lucide-react'
 import Sidebar from '@/components/dashboard/Sidebar'
 import { API_URL } from '@/lib/api-config'
 
@@ -38,7 +39,7 @@ interface StaffMember {
 }
 
 interface AdminStaffManagementPageProps {
-  onNavigate: (page: 'dashboard' | 'staff' | 'admissions' | 'queries' | 'admin' | 'student-performance') => void
+  onNavigate: (page: 'dashboard' | 'staff' | 'admissions' | 'queries' | 'admin' | 'admin-audit' | 'student-performance') => void
 }
 
 const DEPARTMENTS = ['Mathematics', 'English', 'Science', 'Social Studies', 'Languages', 'Physical Education', 'Arts', 'Technology', 'Administration', 'Support Staff', 'Special Education']
@@ -55,6 +56,7 @@ export default function AdminStaffManagementPage({ onNavigate }: AdminStaffManag
   const [openDialog, setOpenDialog] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState<Partial<StaffMember>>({})
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
 
   useEffect(() => {
     fetchStaff()
@@ -69,7 +71,7 @@ export default function AdminStaffManagementPage({ onNavigate }: AdminStaffManag
         }
       })
       const data = await response.json()
-      
+
       const safeData = Array.isArray(data) ? data : []
       const enhancedData = safeData.map((member: any) => ({
         ...member,
@@ -130,7 +132,7 @@ export default function AdminStaffManagementPage({ onNavigate }: AdminStaffManag
       if (editingId) {
         await fetch(`${API_URL}/staff/${editingId}`, {
           method: 'PUT',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
@@ -139,7 +141,7 @@ export default function AdminStaffManagementPage({ onNavigate }: AdminStaffManag
       } else {
         await fetch(`${API_URL}/staff`, {
           method: 'POST',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
@@ -172,6 +174,42 @@ export default function AdminStaffManagementPage({ onNavigate }: AdminStaffManag
     }
   }
 
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(staff.map(s => s._id))
+    } else {
+      setSelectedIds([])
+    }
+  }
+
+  const toggleSelection = (id: string, checked: boolean) => {
+    if (checked) {
+      setSelectedIds(prev => [...prev, id])
+    } else {
+      setSelectedIds(prev => prev.filter(selectedId => selectedId !== id))
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return
+    if (confirm(`Are you sure you want to delete ${selectedIds.length} staff members?`)) {
+      try {
+        const token = localStorage.getItem('token')
+        await Promise.all(selectedIds.map(id =>
+          fetch(`${API_URL}/staff/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+        ))
+        setSelectedIds([])
+        fetchStaff()
+      } catch (error) {
+        console.error('Error in bulk delete:', error)
+        alert('Partial or full failure during bulk deletion.')
+      }
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex h-screen bg-background items-center justify-center">
@@ -184,12 +222,12 @@ export default function AdminStaffManagementPage({ onNavigate }: AdminStaffManag
 
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar 
-        isOpen={sidebarOpen} 
-        onClose={() => setSidebarOpen(false)} 
-        onNavigate={onNavigate} 
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onNavigate={onNavigate}
       />
-      
+
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="bg-background border-b border-border px-6 py-4">
           <div className="flex items-center justify-between">
@@ -346,15 +384,41 @@ export default function AdminStaffManagementPage({ onNavigate }: AdminStaffManag
 
         <div className="flex-1 p-8 bg-background overflow-auto">
           <div className="max-w-7xl mx-auto">
-            <div className="mb-6 flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              <span className="text-sm text-muted-foreground">Total Staff: {staff.length}</span>
+            <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4 border border-border/50 rounded-xl p-2 bg-secondary/20">
+                <Checkbox
+                  id="select-all"
+                  checked={selectedIds.length === staff.length && staff.length > 0}
+                  onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                />
+                <label htmlFor="select-all" className="text-sm font-bold cursor-pointer">Select All Staff</label>
+                <div className="w-px h-4 bg-border/50 mx-2" />
+                <span className="text-sm font-black text-muted-foreground uppercase tracking-widest">{selectedIds.length} Selected</span>
+              </div>
+
+              {selectedIds.length > 0 && (
+                <div className="flex gap-2">
+                  <Button variant="destructive" size="sm" onClick={handleBulkDelete} className="gap-2 font-bold tracking-widest uppercase text-[10px]">
+                    <Trash2 className="w-4 h-4" /> Bulk Delete
+                  </Button>
+                  <Button variant="outline" size="sm" className="gap-2 font-bold tracking-widest uppercase text-[10px] border-primary/20 hover:bg-primary/5 text-primary">
+                    <CheckSquare className="w-4 h-4" /> Bulk Action (WIP)
+                  </Button>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {staff.map((member) => (
-                <Card key={member._id} className="border border-border">
-                  <CardHeader className="pb-4">
+                <Card key={member._id} className={`border transition-all ${selectedIds.includes(member._id) ? 'border-primary ring-1 ring-primary/20 shadow-md shadow-primary/5 bg-primary/5' : 'border-border'}`}>
+                  <div className="absolute top-4 right-4 z-10">
+                    <Checkbox
+                      checked={selectedIds.includes(member._id)}
+                      onCheckedChange={(checked) => toggleSelection(member._id, !!checked)}
+                      className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                    />
+                  </div>
+                  <CardHeader className="pb-4 relative pt-10">
                     <div className="flex items-center gap-4">
                       <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center">
                         <span className="text-lg font-bold text-primary">

@@ -86,6 +86,26 @@ router.post('/bulk', async (req, res) => {
     try {
         const records = req.body; // Expecting array of { studentName, class, section, subject, status, date }
         const result = await Attendance.insertMany(records);
+
+        // Auto-Trigger Announcements for Absences
+        const Announcement = require('../models/Announcement');
+        const absentRecords = records.filter(r => r.status === 'Absent');
+
+        if (absentRecords.length > 0) {
+            const announcements = absentRecords.map(record => ({
+                title: `Attendance Alert: ${record.studentName}`,
+                content: `${record.studentName} was marked Absent for ${record.subject} on ${new Date(record.date || Date.now()).toLocaleDateString()}. Please contact the class teacher.`,
+                type: 'Update',
+                priority: 'High'
+            }));
+            await Announcement.insertMany(announcements);
+
+            const io = req.app.get('io');
+            if (io) {
+                io.emit('newAnnouncement', { count: announcements.length });
+            }
+        }
+
         res.status(201).json(result);
     } catch (error) {
         res.status(400).json({ message: error.message });

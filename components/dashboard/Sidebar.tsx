@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 interface SidebarProps {
   isOpen: boolean
   onClose: () => void
-  onNavigate: (page: 'dashboard' | 'staff' | 'admissions' | 'queries' | 'admin' | 'student-performance') => void
+  onNavigate: (page: 'dashboard' | 'staff' | 'admissions' | 'queries' | 'admin' | 'admin-audit' | 'student-performance') => void
 }
 
 const menuItems = [
@@ -18,6 +18,7 @@ const menuItems = [
 
 const adminItems = [
   { icon: Settings, label: 'Admin Panel', page: 'admin' as const },
+  { icon: Users, label: 'Audit Logs (SecOps)', page: 'admin-audit' as const },
 ]
 
 export default function Sidebar({ isOpen, onClose, onNavigate }: SidebarProps) {
@@ -33,9 +34,8 @@ export default function Sidebar({ isOpen, onClose, onNavigate }: SidebarProps) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 w-64 bg-sidebar border-r border-sidebar-border transform transition-transform duration-300 z-40 ${
-          isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-        }`}
+        className={`fixed lg:static inset-y-0 left-0 w-64 bg-sidebar border-r border-sidebar-border transform transition-transform duration-300 z-40 ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+          }`}
       >
         <div className="flex flex-col h-full">
           {/* Header */}

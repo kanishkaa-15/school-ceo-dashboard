@@ -14,12 +14,14 @@ import {
     Loader2
 } from 'lucide-react'
 import { API_URL } from '@/lib/api-config'
+import { Button } from '@/components/ui/button'
 
 export default function StudentDetailedPerformance({ studentName, studentId }: { studentName: string, studentId?: string }) {
     const [attendance, setAttendance] = useState<any[]>([])
     const [grades, setGrades] = useState<any[]>([])
     const [projections, setProjections] = useState<any[]>([])
     const [loading, setLoading] = useState(false)
+    const [isDownloading, setIsDownloading] = useState(false)
 
     useEffect(() => {
         const fetchData = async () => {
@@ -34,7 +36,7 @@ export default function StudentDetailedPerformance({ studentName, studentId }: {
                 // Construct endpoints based on whether we have an ID or Name
                 const attendanceUrl = isId ? `${apiUrl}/attendance/id/${encodedIdentifier}` : `${apiUrl}/attendance/${encodedIdentifier}`
                 const gradesUrl = isId ? `${apiUrl}/grades/id/${encodedIdentifier}` : `${apiUrl}/grades/${encodedIdentifier}`
-                const projectionUrl = `${apiUrl}/analytics/predictions/grade-projection/${encodeURIComponent(studentName)}` // Projection still uses name or ID? Let's stick to name for now as it might be complex on backend
+                const projectionUrl = `${apiUrl}/analytics/predictions/grade-projection/${encodeURIComponent(studentName)}`
 
                 const [attendanceRes, gradesRes, projectionRes] = await Promise.all([
                     fetch(attendanceUrl, { headers: { 'Authorization': `Bearer ${token}` } }),
@@ -67,12 +69,45 @@ export default function StudentDetailedPerformance({ studentName, studentId }: {
         }
 
         if (studentName) {
-            setLoading(true) // Set to true only when we actually start fetching
+            setLoading(true)
             fetchData()
         } else {
             setLoading(false)
         }
     }, [studentName])
+
+    const handleDownloadFullReport = async () => {
+        try {
+            setIsDownloading(true)
+            const token = localStorage.getItem('token')
+            const identifier = studentId || studentName
+            const queryParam = studentId ? `studentId=${identifier}` : `studentName=${encodeURIComponent(identifier)}`
+
+            const response = await fetch(`${API_URL}/analytics/student-report?${queryParam}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `Failed to generate report (Status: ${response.status})`);
+            }
+
+            const blob = await response.blob()
+            const url = window.URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `Report_Card_${studentName.replace(/\s+/g, '_')}.pdf`
+            document.body.appendChild(a)
+            a.click()
+            window.URL.revokeObjectURL(url)
+            document.body.removeChild(a)
+        } catch (error: any) {
+            console.error('Download error details:', error)
+            alert(`Download failed: ${error.message}`)
+        } finally {
+            setIsDownloading(false)
+        }
+    }
 
     if (loading) {
         return (
@@ -102,8 +137,8 @@ export default function StudentDetailedPerformance({ studentName, studentId }: {
         return {
             subject,
             score: Math.round(avgScore),
-            attendance: 100, // Placeholder
-            trend: '+0%', // Placeholder
+            attendance: 100,
+            trend: '+0%',
             latestGrade: subjectStats[subject].latestGrade
         }
     })
@@ -229,9 +264,14 @@ export default function StudentDetailedPerformance({ studentName, studentId }: {
                         {grades.length === 0 && (
                             <p className="text-center py-8 text-sm text-muted-foreground">No grades recorded recently.</p>
                         )}
-                        <button className="w-full mt-2 py-2 text-[10px] font-black text-primary uppercase tracking-widest hover:underline transition-all">
-                            View Full Report Card
-                        </button>
+                        <Button
+                            disabled={isDownloading}
+                            onClick={handleDownloadFullReport}
+                            variant="ghost"
+                            className="w-full mt-2 py-2 text-[10px] font-black text-primary uppercase tracking-widest hover:underline transition-all h-auto"
+                        >
+                            {isDownloading ? "Generating Report..." : "View Full Report Card"}
+                        </Button>
                     </CardContent>
                 </Card>
             </div>

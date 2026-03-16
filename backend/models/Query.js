@@ -11,7 +11,9 @@ const querySchema = new mongoose.Schema({
   priority: { type: String, enum: ['Low', 'Medium', 'High'], default: 'Medium' },
   sentiment: { type: String, enum: ['Positive', 'Neutral', 'Concerned'], default: 'Neutral' },
   response: { type: String },
-  assignedTo: { type: String }
+  assignedTo: { type: String },
+  resolvedAt: { type: Date },
+  slaDurationHours: { type: Number }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Query', querySchema);

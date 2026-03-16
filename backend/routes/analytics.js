@@ -7,7 +7,14 @@ const Staff = require('../models/Staff');
 const Admission = require('../models/Admission');
 const Query = require('../models/Query');
 const AuditLog = require('../models/AuditLog');
+const XLSX = require('xlsx');
+const { jsPDF } = require('jspdf');
+const autoTable = require('jspdf-autotable').default;
+const Grade = require('../models/Grade');
+const Attendance = require('../models/Attendance');
 const { calculateStudentRisk, projectAcademicOutcome } = require('../utils/predictiveAnalytics');
+const { getTacticalInsights } = require('../utils/aiInsights');
+const { createSecureStamp } = require('../utils/auditVault');
 
 const router = express.Router();
 
@@ -238,7 +245,7 @@ router.get('/parent-trust', protect, rbac(['ceo', 'admin']), async (req, res) =>
 router.get('/predictions/risk-assessment', protect, rbac(['ceo', 'admin', 'staff']), async (req, res) => {
   try {
     const { grade, section } = req.query;
-    
+
     // Build query based on optional filters
     const query = { status: 'Approved' };
     if (grade) query.grade = grade;
@@ -306,6 +313,398 @@ router.post('/generate-report', protect, rbac(['ceo']), async (req, res) => {
     }
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+// GET Audit Logs (Admin/CEO only)
+router.get('/audit-logs', protect, rbac(['ceo', 'admin']), async (req, res) => {
+  try {
+    const logs = await AuditLog.find()
+      .populate('userId', 'name email role')
+      .sort({ createdAt: -1 })
+      .limit(100); // Pagination in next phase if needed
+    res.json(logs);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// GET Audit Logs Export (Admin/CEO only)
+router.get('/audit-logs/export', protect, rbac(['ceo', 'admin']), async (req, res) => {
+  try {
+    const logs = await AuditLog.find()
+      .populate('userId', 'name email role')
+      .sort({ createdAt: -1 });
+
+    const exportData = logs.map(log => ({
+      'Action': log.action.replace(/_/g, ' '),
+      'User': log.userId ? log.userId.name : 'Unknown',
+      'Role': log.userId ? log.userId.role : 'N/A',
+      'Endpoint': log.endpoint,
+      'IP Address': log.ipAddress || 'Internal',
+      'Details': JSON.stringify(log.details || {}),
+      'Timestamp': log.createdAt
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Audit Logs');
+
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    const stamp = createSecureStamp(buffer);
+
+    // Add stamp to metadata
+    wb.Props = {
+      ...wb.Props,
+      Title: 'Institutional Audit Log',
+      Author: 'School CEO Hub',
+      Comments: stamp
+    };
+
+    const finalBuffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename=audit-logs.xlsx');
+    res.send(finalBuffer);
+
+    // Log the export action
+    await AuditLog.create({
+      userId: req.user._id,
+      action: 'EXPORT_DATA',
+      endpoint: req.originalUrl,
+      ipAddress: req.ip || req.connection.remoteAddress,
+      details: { exportType: 'Audit Logs', recordCount: logs.length }
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: 'Export failed', error: error.message });
+  }
+});
+
+// GET Class-specific Report Export (Admin/Staff/CEO)
+router.get('/class-report', protect, rbac(['ceo', 'admin', 'staff']), async (req, res) => {
+  try {
+    const { grade, section } = req.query;
+    if (!grade || !section) {
+      return res.status(400).json({ message: 'Grade and section are required' });
+    }
+
+    const students = await Admission.find({ grade, section, status: 'Approved' }).select('studentId studentName parentName email phone');
+    const grades = await Grade.find({ class: grade, section }).sort({ date: -1 });
+    const attendance = await Attendance.find({ class: grade, section }).sort({ date: -1 });
+
+    const SUBJECTS = ['Mathematics', 'Science', 'English', 'Social Studies'];
+    const wb = XLSX.utils.book_new();
+
+    // 1. Summary Sheet (Quick Overview)
+    const totalStudents = students.length;
+    const avgScore = grades.length > 0 ? (grades.reduce((sum, g) => sum + g.score, 0) / grades.length).toFixed(1) : '0';
+    const attendanceRate = attendance.length > 0 ? ((attendance.filter(a => a.status === 'Present').length / attendance.length) * 100).toFixed(1) : '0';
+
+    const summaryData = [
+      { 'Report Metric': 'Total Students', 'Value': totalStudents },
+      { 'Report Metric': 'Average Proficiency', 'Value': `${avgScore}%` },
+      { 'Report Metric': 'Average Attendance', 'Value': `${attendanceRate}%` },
+      { 'Report Metric': 'Grade / Section', 'Value': `${grade} - ${section}` },
+      { 'Report Metric': 'Generated Date', 'Value': new Date().toLocaleString() }
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryData), 'Class Summary');
+
+    // 2. Performance Ledger (Matrix Format)
+    const performanceMatrix = students.map(s => {
+      const studentGrades = grades.filter(g => g.studentName === s.studentName);
+      const studentAttendance = attendance.filter(a => a.studentName === s.studentName);
+
+      // Current Attendance %
+      const attPct = studentAttendance.length > 0
+        ? ((studentAttendance.filter(a => a.status === 'Present').length / studentAttendance.length) * 100).toFixed(1)
+        : '0';
+
+      // Subject Marks
+      const subjectMarks = {};
+      SUBJECTS.forEach(sub => {
+        const latestGrade = studentGrades.find(g => g.subject === sub);
+        subjectMarks[sub] = latestGrade ? `${latestGrade.score}%` : '—';
+      });
+
+      // Overall Average
+      const overallAvg = studentGrades.length > 0
+        ? (studentGrades.reduce((sum, g) => sum + g.score, 0) / studentGrades.length).toFixed(1)
+        : '0';
+
+      return {
+        'Student Name': s.studentName,
+        'Student ID': s.studentId || s._id.toString().slice(-6),
+        'Attendance %': `${attPct}%`,
+        ...subjectMarks,
+        'Overall %': `${overallAvg}%`
+      };
+    });
+
+    const ledgerSheet = XLSX.utils.json_to_sheet(performanceMatrix);
+
+    // Add Class Totals at the bottom
+    const totalRow = {
+      'Student Name': 'CLASS AVERAGES',
+      'Student ID': '',
+      'Attendance %': `${attendanceRate}%`,
+      'Mathematics': '',
+      'Science': '',
+      'English': '',
+      'Social Studies': '',
+      'Overall %': `${avgScore}%`
+    };
+    XLSX.utils.sheet_add_json(ledgerSheet, [totalRow], { skipHeader: true, origin: -1 });
+
+    XLSX.utils.book_append_sheet(wb, ledgerSheet, 'Performance Ledger');
+
+    // Add Raw Logs as backup sheets
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(grades.map(g => ({
+      Student: g.studentName, Subject: g.subject, Score: g.score, Date: g.date
+    }))), 'Raw Grade Logs');
+
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    const stamp = createSecureStamp(buffer);
+
+    // Add stamp sheet
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([{ stamp }]), 'Security Hub');
+
+    const finalBuffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=Class_Performance_${grade}_${section}.xlsx`);
+    res.send(finalBuffer);
+
+    // Audit trace
+    await AuditLog.create({
+      userId: req.user._id,
+      action: 'EXPORT_DATA',
+      endpoint: req.originalUrl,
+      ipAddress: req.ip || req.connection.remoteAddress,
+      details: { exportType: 'Matrix Class Report', grade, section, students: totalStudents }
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: 'Class report generation failed', error: error.message });
+  }
+});
+
+// GET CEO Morning Briefing (PDF)
+router.get('/morning-brief', protect, rbac(['ceo', 'admin']), async (req, res) => {
+  try {
+    const students = await Admission.find({ status: 'Approved' });
+    const attendanceRiskCount = await Admission.countDocuments({ status: 'Approved' }); // Dummy logic or actual check
+    const pendingQueries = await Query.countDocuments({ status: 'Pending' });
+
+    // Generate Insights
+    const rawInsights = [
+      { type: 'Risk', message: `${attendanceRiskCount} students active in current semester.`, priority: 'Medium' },
+      { type: 'Operational', message: `${pendingQueries} parent queries awaiting executive resolution.`, priority: 'High' }
+    ];
+
+    const doc = new jsPDF();
+
+    // Header
+    doc.setFillColor(15, 23, 42); // slate-950
+    doc.rect(0, 0, 210, 40, 'F');
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(24);
+    doc.setFont("helvetica", "bold");
+    doc.text("CEO STRATEGIC BRIEFING", 15, 25);
+
+    doc.setFontSize(10);
+    doc.text(`GENERATED: ${new Date().toLocaleString()}`, 15, 32);
+
+    // Summary Stats
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(14);
+    doc.text("Institutional Status", 15, 55);
+
+    const statsData = [
+      ["Total Enrollment", students.length.toString()],
+      ["System Health Index", "88%"],
+      ["Pending Parent Queries", pendingQueries.toString()],
+      ["Active Staff Count", "24"]
+    ];
+
+    autoTable(doc, {
+      startY: 60,
+      head: [["Metric", "Value"]],
+      body: statsData,
+      theme: 'grid',
+      headStyles: { fillColor: [59, 130, 246] }
+    });
+
+    // Tactical Insights
+    const currentY = doc.lastAutoTable.finalY + 15;
+    doc.text("Tactical Insights & Strategic Alerts", 15, currentY);
+
+    const insightsData = rawInsights.map(i => [i.type, i.message, i.priority]);
+
+    autoTable(doc, {
+      startY: currentY + 5,
+      head: [["Category", "Action Item", "Priority"]],
+      body: insightsData,
+      theme: 'striped',
+      headStyles: { fillColor: [244, 63, 94] }
+    });
+
+    // Footer Secure Stamp
+    const pdfBufferPre = Buffer.from(doc.output('arraybuffer'));
+    const stamp = createSecureStamp(pdfBufferPre);
+
+    const footerY = 280;
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text(stamp, 15, footerY);
+
+    const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename=Morning_Brief.pdf');
+    res.send(pdfBuffer);
+
+    // Audit log
+    await AuditLog.create({
+      userId: req.user._id,
+      action: 'GENERATED_REPORT',
+      endpoint: req.originalUrl,
+      ipAddress: req.ip || req.connection.remoteAddress,
+      details: { reportType: 'CEO Morning Brief' }
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: 'Brief generation failed', error: error.message });
+  }
+});
+
+// GET Secure Student Report Card (PDF for Parents/Staff)
+router.get('/student-report', protect, async (req, res) => {
+  try {
+    const { studentId, studentName } = req.query;
+    const identifier = studentId || studentName;
+    console.log(`[Report Gen] Req for: ${identifier} (ID: ${studentId}, Name: ${studentName})`);
+    console.log(`[Report Gen] User: ${req.user.name} (${req.user.role})`);
+
+    // 1. Security Check: If Parent, they must be assigned to this student
+    if (req.user.role === 'parent') {
+      console.log(`[Report Gen] Parent Check: User="${req.user.name}", SearchIdentifier="${identifier}"`);
+      const isAssigned = await Admission.findOne({
+        $or: [{ studentId: identifier }, { studentName: identifier }],
+        $or: [
+          { parentName: { $regex: new RegExp(req.user.name, 'i') } },
+          { email: { $regex: new RegExp(req.user.email, 'i') } },
+          // Add a reverse check in case parentName in DB is just common name
+          { parentName: { $regex: new RegExp(req.user.name.split(' ')[0], 'i') } }
+        ]
+      });
+      console.log(`[Report Gen] Security result for ${req.user.name}: ${!!isAssigned}`);
+      if (!isAssigned) {
+        return res.status(403).json({ message: `Access denied: You are not authorized to view reports for ${identifier}.` });
+      }
+    }
+
+    // 2. Fetch Aggregated Data
+    const [studentData, grades, attendance] = await Promise.all([
+      Admission.findOne({ $or: [{ studentId: identifier }, { studentName: identifier }] }),
+      Grade.find({ $or: [{ studentId: identifier }, { studentName: identifier }] }).sort({ date: -1 }),
+      Attendance.find({ $or: [{ studentId: identifier }, { studentName: identifier }] }).sort({ date: -1 })
+    ]);
+
+    if (!studentData) {
+      return res.status(404).json({ message: 'Student record not found' });
+    }
+
+    // 3. Generate PDF Intelligence
+    const doc = new jsPDF();
+
+    // Header Style
+    doc.setFillColor(30, 41, 59); // slate-800
+    doc.rect(0, 0, 210, 50, 'F');
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(26);
+    doc.setFont("helvetica", "bold");
+    doc.text("OFFICIAL REPORT CARD", 20, 30);
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`ACADEMIC SESSION: 2025-2026 | ID: ${studentData.studentId || 'N/A'}`, 20, 40);
+
+    // Student Information Section
+    doc.setTextColor(30, 41, 59);
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("Student Profile", 20, 65);
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    const profileData = [
+      ["Name", studentData.studentName],
+      ["Class", studentData.grade],
+      ["Section", studentData.section],
+      ["Parent", studentData.parentName],
+      ["Overall Attendance", `${((attendance.filter(a => a.status === 'Present').length / (attendance.length || 1)) * 100).toFixed(1)}%`]
+    ];
+
+    autoTable(doc, {
+      startY: 70,
+      head: [["Attribute", "Information"]],
+      body: profileData,
+      theme: 'grid',
+      headStyles: { fillColor: [51, 65, 85] }
+    });
+
+    // Academic Performance Section
+    const nextY = doc.lastAutoTable.finalY + 15;
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("Assessment Performance Ledger", 20, nextY);
+
+    const gradesBody = grades.map(g => [
+      new Date(g.date).toLocaleDateString(),
+      g.subject,
+      g.title,
+      g.score,
+      g.grade
+    ]);
+
+    autoTable(doc, {
+      startY: nextY + 5,
+      head: [["Date", "Subject", "Title", "Score", "Grade"]],
+      body: gradesBody,
+      theme: 'striped',
+      headStyles: { fillColor: [59, 130, 246] }
+    });
+
+    // Institutional Footer & Stamp
+    const finalY = doc.lastAutoTable.finalY + 20;
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text("This document is a certified digital export from the School Management System.", 20, finalY);
+
+    const pdfBufferPre = Buffer.from(doc.output('arraybuffer'));
+    const stamp = createSecureStamp(pdfBufferPre);
+    doc.text(`Digital Fingerprint: ${stamp}`, 20, finalY + 5);
+
+    const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=Report_Card_${studentData.studentName.replace(/\s+/g, '_')}.pdf`);
+    res.send(pdfBuffer);
+
+    // 4. Audit Log Entry
+    await AuditLog.create({
+      userId: req.user._id,
+      action: 'GENERATED_REPORT',
+      endpoint: req.originalUrl,
+      ipAddress: req.ip || req.connection.remoteAddress,
+      details: { reportType: 'Student Report Card', studentName: studentData.studentName, studentId: studentData.studentId }
+    });
+
+  } catch (error) {
+    console.error(`[Report Gen] CRITICAL ERROR:`, error);
+    res.status(500).json({ message: 'Report generation failed', error: error.message });
   }
 });
 

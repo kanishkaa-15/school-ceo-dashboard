@@ -16,9 +16,10 @@ import StaffDashboardPage from '@/components/pages/StaffDashboardPage'
 import StudentPerformancePage from '@/components/pages/StudentPerformancePage'
 import ClassDetailsPage from '@/components/pages/ClassDetailsPage'
 import ParentDashboardPage from '@/components/pages/ParentDashboardPage'
+import AdminAuditLogsPage from '@/components/pages/AdminAuditLogsPage'
 import { API_URL } from '@/lib/api-config'
 
-type PageType = 'signup' | 'login' | 'dashboard' | 'staff' | 'admissions' | 'queries' | 'admin' | 'admin-staff' | 'admin-admissions' | 'admin-queries' | 'admin-staff-management' | 'staff-dashboard' | 'student-performance' | 'class-details' | 'parent-dashboard'
+type PageType = 'signup' | 'login' | 'dashboard' | 'staff' | 'admissions' | 'queries' | 'admin' | 'admin-staff' | 'admin-admissions' | 'admin-queries' | 'admin-staff-management' | 'admin-audit' | 'staff-dashboard' | 'student-performance' | 'class-details' | 'parent-dashboard'
 
 export default function Home() {
   const [currentPage, setCurrentPage] = useState<PageType>('login')
@@ -49,7 +50,7 @@ export default function Home() {
         const userData = await response.json()
         setIsLoggedIn(true)
         // Route based on user role
-        switch(userData.user.role) {
+        switch (userData.user.role) {
           case 'ceo':
             setCurrentPage('dashboard')
             break
@@ -81,7 +82,7 @@ export default function Home() {
   const handleLogin = (user: any) => {
     setIsLoggedIn(true)
     // Route based on user role
-    switch(user.role) {
+    switch (user.role) {
       case 'ceo':
         setCurrentPage('dashboard')
         break
@@ -143,6 +144,7 @@ export default function Home() {
       {currentPage === 'admin-admissions' && <AdminAdmissionsPage onNavigate={handleNavigate} />}
       {currentPage === 'admin-queries' && <AdminQueriesPage onNavigate={handleNavigate} />}
       {currentPage === 'admin-staff-management' && <AdminStaffManagementPage onNavigate={handleNavigate} />}
+      {currentPage === 'admin-audit' && <AdminAuditLogsPage onNavigate={handleNavigate} onLogout={handleLogout} />}
       {currentPage === 'staff-dashboard' && <StaffDashboardPage onLogout={handleLogout} />}
       {currentPage === 'parent-dashboard' && <ParentDashboardPage onLogout={handleLogout} />}
       {currentPage === 'student-performance' && <StudentPerformancePage onNavigate={handleNavigate} onClassSelect={handleClassSelect} />}
