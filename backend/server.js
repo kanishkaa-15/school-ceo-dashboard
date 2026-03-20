@@ -42,15 +42,19 @@ io.on('connection', (socket) => {
   });
 });
 
+// CORS middleware - Moved to top to handle preflight OPTIONS correctly
+app.use(cors({
+  origin: true,
+  credentials: true
+}));
+
+// Route for explicit OPTIONS if needed
+app.options('*', cors());
+
 // Security middleware
 app.use(apiLimiter);
 app.use(sanitizeInput);
 
-// CORS middleware
-app.use(cors({
-  origin: true, // Allow all origins in development to fix NetworkError
-  credentials: true
-}));
 app.use(express.json({ limit: '10mb' }));
 
 // Routes

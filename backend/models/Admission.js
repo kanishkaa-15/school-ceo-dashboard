@@ -8,7 +8,7 @@ const admissionSchema = new mongoose.Schema({
   phone: { type: String, required: true },
   grade: { type: String, required: true },
   section: { type: String, default: 'A' },
-  status: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' },
+  status: { type: String, enum: ['Pending', 'Approved', 'Rejected', 'Paid', 'Enrolled'], default: 'Pending' },
   applicationDate: { type: Date, default: Date.now },
   documents: [{ type: String }],
   notes: { type: String }

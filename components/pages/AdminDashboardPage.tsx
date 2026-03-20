@@ -8,7 +8,7 @@ import AdmissionsAnalytics from '@/components/dashboard/AdmissionsAnalytics'
 import StaffDetails from '@/components/dashboard/StaffDetails'
 import ParentQueries from '@/components/dashboard/ParentQueries'
 import Sidebar from '@/components/dashboard/Sidebar'
-import InstitutionalHealthIndex from '@/components/dashboard/InstitutionalHealthIndex'
+import StrategicOutlook from '@/components/dashboard/StrategicOutlook'
 import LearningOutcomeGrowth from '@/components/dashboard/LearningOutcomeGrowth'
 import RetentionAttritionAnalytics from '@/components/dashboard/RetentionAttritionAnalytics'
 import ParentTrustIndex from '@/components/dashboard/ParentTrustIndex'
@@ -135,15 +135,9 @@ export default function AdminDashboardPage({ onNavigate, onLogout }: AdminDashbo
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] opacity-60">Real-time health telemetry</p>
                 </div>
               </div>
-              <div className="grid gap-8 lg:grid-cols-3">
+              <div className="grid gap-8 lg:grid-cols-2">
                 <div className="p-2 rounded-[2rem] hover:bg-white/5 dark:hover:bg-slate-900/20 transition-all border border-transparent hover:border-white/5">
-                  <NeuralPulse
-                    score={healthData?.currentHealth?.overall || 88}
-                    sentiment={healthData?.currentHealth?.riskLevel === 'LOW' ? 'Positive' : healthData?.currentHealth?.riskLevel === 'MEDIUM' ? 'Neutral' : 'Concerned'}
-                  />
-                </div>
-                <div className="p-2 rounded-[2rem] hover:bg-white/5 dark:hover:bg-slate-900/20 transition-all border border-transparent hover:border-white/5">
-                  <InstitutionalHealthIndex onDataLoad={setHealthData} />
+                  <StrategicOutlook />
                 </div>
                 <div className="p-2 rounded-[2rem] hover:bg-white/5 dark:hover:bg-slate-900/20 transition-all border border-transparent hover:border-white/5">
                   <LearningOutcomeGrowth />

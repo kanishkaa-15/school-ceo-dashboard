@@ -32,7 +32,7 @@ import AdmissionsAnalytics from '@/components/dashboard/AdmissionsAnalytics'
 import StaffDetails from '@/components/dashboard/StaffDetails'
 import ParentQueries from '@/components/dashboard/ParentQueries'
 import CEOSidebar from '@/components/dashboard/CEOSidebar'
-import InstitutionalHealthIndex from '@/components/dashboard/InstitutionalHealthIndex'
+import StrategicOutlook from '@/components/dashboard/StrategicOutlook'
 import LearningOutcomeGrowth from '@/components/dashboard/LearningOutcomeGrowth'
 import RetentionAttritionAnalytics from '@/components/dashboard/RetentionAttritionAnalytics'
 import ParentTrustIndex from '@/components/dashboard/ParentTrustIndex'
@@ -143,6 +143,25 @@ export default function DashboardPage({ onLogout, onNavigate }: DashboardPagePro
     return baseStats.filter(s => s.label.toLowerCase().includes(searchQuery.toLowerCase()))
   }, [searchQuery, studentsCount, staff, admissions, queries, timeOffset])
 
+  useEffect(() => {
+    const fetchHealthData = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        const response = await fetch(`${SOCKET_URL}/api/analytics/health-index`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        if (response.ok) {
+          const result = await response.json()
+          setHealthData(result)
+        }
+      } catch (error) {
+        console.error('Failed to fetch health index:', error)
+      }
+    }
+
+    fetchHealthData()
+  }, [])
+
   // Quantum Results (Entities)
   const quantumResults = useMemo(() => {
     if (searchQuery.length < 2) return []
@@ -196,12 +215,8 @@ export default function DashboardPage({ onLogout, onNavigate }: DashboardPagePro
                 Full Telemetry <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
-            <div className="grid gap-8 lg:grid-cols-2 items-start">
-              <InstitutionalHealthIndex onDataLoad={setHealthData} />
-              <div className="space-y-8">
-                <StrategicRadar data={healthData?.currentHealth} />
-                <SentimentPulse queries={queries} />
-              </div>
+            <div className="grid gap-8 lg:grid-cols-1 items-start">
+              <StrategicOutlook />
             </div>
           </section>
         )
@@ -463,8 +478,8 @@ export default function DashboardPage({ onLogout, onNavigate }: DashboardPagePro
                 </span>
 
                 <Badge variant="outline" className={`text-[10px] font-black uppercase tracking-widest ${timeOffset[0] === 0 ? 'bg-white/10 text-white' :
-                    timeOffset[0] < 0 ? 'bg-amber-500/20 text-amber-500 border-amber-500/30' :
-                      'bg-primary/20 text-primary border-primary/30'
+                  timeOffset[0] < 0 ? 'bg-amber-500/20 text-amber-500 border-amber-500/30' :
+                    'bg-primary/20 text-primary border-primary/30'
                   } border-none shadow-inner`}>
                   {timeOffset[0] === 0 ? 'Present-Time' : timeOffset[0] < 0 ? `${Math.abs(timeOffset[0])} Months Past` : `+${timeOffset[0]} Months Future`}
                 </Badge>
@@ -527,7 +542,7 @@ export default function DashboardPage({ onLogout, onNavigate }: DashboardPagePro
 
         {/* Dashboard content */}
         <main className={`flex-1 overflow-auto bg-[#F8FAFC] dark:bg-[#020617] relative transition-all duration-1000 ${timeOffset[0] < 0 ? 'sepia-[0.3] grayscale-[0.2]' : // Past visual effect
-            timeOffset[0] > 0 ? 'hue-rotate-15 contrast-125 saturate-150 shadow-[inset_0_0_150px_rgba(56,189,248,0.1)]' : '' // Future visual effect
+          timeOffset[0] > 0 ? 'hue-rotate-15 contrast-125 saturate-150 shadow-[inset_0_0_150px_rgba(56,189,248,0.1)]' : '' // Future visual effect
           }`}>
           {/* Subtle Background Gradients */}
           <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-20">

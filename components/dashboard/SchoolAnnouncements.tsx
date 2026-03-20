@@ -7,7 +7,25 @@ import { motion } from 'framer-motion'
 import { Megaphone, Bell, Loader2 } from 'lucide-react'
 import { API_URL } from '@/lib/api-config'
 
-export default function SchoolAnnouncements() {
+interface SchoolAnnouncementsProps {
+    language?: 'en' | 'ta'
+}
+
+const translations = {
+    en: {
+        schoolAnnouncements: "School Announcements",
+        priority: "PRIORITY",
+        noAnnouncements: "No announcements at this time."
+    },
+    ta: {
+        schoolAnnouncements: "பள்ளி அறிவிப்புகள்",
+        priority: "முன்னுரிமை",
+        noAnnouncements: "தற்போது எந்த அறிவிப்புகளும் இல்லை."
+    }
+}
+
+export default function SchoolAnnouncements({ language = 'en' }: SchoolAnnouncementsProps) {
+    const t = translations[language]
     const [announcements, setAnnouncements] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
 
@@ -39,7 +57,7 @@ export default function SchoolAnnouncements() {
             <CardHeader className="pb-3 border-b border-border/30">
                 <CardTitle className="text-lg font-bold flex items-center gap-2">
                     <Megaphone className="w-5 h-5 text-primary" />
-                    School Announcements
+                    {t.schoolAnnouncements}
                 </CardTitle>
             </CardHeader>
             <CardContent className="pt-4 px-0">
@@ -51,8 +69,8 @@ export default function SchoolAnnouncements() {
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: idx * 0.1 }}
                             className={`p-4 rounded-2xl border ${announcement.priority === 'High'
-                                    ? 'bg-red-500/5 border-red-500/20'
-                                    : 'bg-primary/5 border-primary/20'
+                                ? 'bg-red-500/5 border-red-500/20'
+                                : 'bg-primary/5 border-primary/20'
                                 } flex flex-col gap-2 relative overflow-hidden group hover:shadow-md transition-all`}
                         >
                             <div className="flex justify-between items-start relative z-10">
@@ -60,7 +78,7 @@ export default function SchoolAnnouncements() {
                                     variant={announcement.priority === 'High' ? 'destructive' : 'secondary'}
                                     className="text-[9px] font-black uppercase tracking-tighter px-1.5 py-0"
                                 >
-                                    {announcement.priority} PRIORITY
+                                    {announcement.priority} {t.priority}
                                 </Badge>
                                 <span className="text-[10px] font-bold text-muted-foreground">
                                     {new Date(announcement.date).toLocaleDateString()}
@@ -78,7 +96,7 @@ export default function SchoolAnnouncements() {
                         </motion.div>
                     ))}
                     {announcements.length === 0 && (
-                        <p className="col-span-2 text-center py-8 text-sm text-muted-foreground">No announcements at this time.</p>
+                        <p className="col-span-2 text-center py-8 text-sm text-muted-foreground">{t.noAnnouncements}</p>
                     )}
                 </div>
             </CardContent>

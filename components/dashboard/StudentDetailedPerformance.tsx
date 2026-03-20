@@ -16,7 +16,73 @@ import {
 import { API_URL } from '@/lib/api-config'
 import { Button } from '@/components/ui/button'
 
-export default function StudentDetailedPerformance({ studentName, studentId }: { studentName: string, studentId?: string }) {
+interface StudentDetailedPerformanceProps {
+    studentName: string
+    studentId?: string
+    language?: 'en' | 'ta'
+}
+
+const translations = {
+    en: {
+        overallAttendance: "Overall Attendance",
+        excellent: "Excellent",
+        good: "Good",
+        needsReview: "Needs Review",
+        sessionsAttended: "sessions attended",
+        assessments: "Assessments",
+        totalTests: "Total tests this term",
+        subjectProf: "Subject Proficiency",
+        noAssessment: "No assessment data available yet.",
+        recentGrades: "Recent Grades",
+        score: "Score",
+        noGrades: "No grades recorded recently.",
+        genReport: "Generating Report...",
+        viewReport: "View Full Report Card",
+        aiForecast: "AI Academic Forecast",
+        predictiveDesc: "Predictive analysis based on recent performance momentum",
+        projected: "Projected",
+        current: "Current",
+        delta: "Delta",
+        collectingData: "Collecting more data points to generate accurate predictions...",
+        ceoInsight: "CEO Insight",
+        showing: "is showing",
+        positive: "positive",
+        variable: "variable",
+        momentum: "momentum in core subjects. Intervention in",
+        couldMaximize: "could maximize the final term result."
+    },
+    ta: {
+        overallAttendance: "ஒட்டுமொத்த வருகை",
+        excellent: "மிக நன்று",
+        good: "நன்று",
+        needsReview: "கவனம் தேவை",
+        sessionsAttended: "அமர்வுகள் கலந்து கொள்ளப்பட்டன",
+        assessments: "மதிப்பீடுகள்",
+        totalTests: "இந்த காலாண்டில் மொத்த தேர்வுகள்",
+        subjectProf: "பாடத் தேர்ச்சி",
+        noAssessment: "மதிப்பீட்டுத் தரவு இன்னும் கிடைக்கவில்லை.",
+        recentGrades: "சமீபத்திய மதிப்பெண்கள்",
+        score: "மதிப்பெண்",
+        noGrades: "சமீபத்தில் மதிப்பெண்கள் எதுவும் பதிவு செய்யப்படவில்லை.",
+        genReport: "அறிக்கை உருவாக்கப்படுகிறது...",
+        viewReport: "முழு அறிக்கை அட்டையைக் காண்க",
+        aiForecast: "AI கல்வி கணிப்பு",
+        predictiveDesc: "சமீபத்திய செயல்திறன் வேகத்தின் அடிப்படையில் முன்கணிப்பு பகுப்பாய்வு",
+        projected: "கணிக்கப்பட்டது",
+        current: "தற்போதைய",
+        delta: "மாற்றம்",
+        collectingData: "துல்லியமான கணிப்புகளை உருவாக்க கூடுதல் தரவுப் புள்ளிகள் சேகரிக்கப்படுகின்றன...",
+        ceoInsight: "தலைமை அதிகாரி நுண்ணறிவு",
+        showing: "",
+        positive: "நேர்மறையான",
+        variable: "மாறக்கூடிய",
+        momentum: "வேகத்தை முக்கிய பாடங்களில் காட்டுகிறார். தலையீடு",
+        couldMaximize: "இறுதி பருவ முடிவை அதிகரிக்கலாம்."
+    }
+}
+
+export default function StudentDetailedPerformance({ studentName, studentId, language = 'en' }: StudentDetailedPerformanceProps) {
+    const t = translations[language]
     const [attendance, setAttendance] = useState<any[]>([])
     const [grades, setGrades] = useState<any[]>([])
     const [projections, setProjections] = useState<any[]>([])
@@ -153,15 +219,15 @@ export default function StudentDetailedPerformance({ studentName, studentId }: {
                 >
                     <div className="flex items-center justify-between relative z-10">
                         <div>
-                            <p className="text-xs font-bold text-primary uppercase tracking-widest mb-1">Overall Attendance</p>
+                            <p className="text-xs font-bold text-primary uppercase tracking-widest mb-1">{t.overallAttendance}</p>
                             <div className="flex items-baseline gap-2">
                                 <span className="text-4xl font-black text-primary">{attendanceRate.toFixed(1)}%</span>
                                 <Badge variant="outline" className="border-primary/20 text-primary font-bold">
-                                    {attendanceRate >= 90 ? 'Excellent' : attendanceRate >= 75 ? 'Good' : 'Needs Review'}
+                                    {attendanceRate >= 90 ? t.excellent : attendanceRate >= 75 ? t.good : t.needsReview}
                                 </Badge>
                             </div>
                             <p className="text-sm text-muted-foreground mt-2">
-                                {presentClasses} of {totalClasses} sessions attended
+                                {presentClasses} / {totalClasses} {t.sessionsAttended}
                             </p>
                         </div>
                         <div className="p-4 bg-white/50 dark:bg-black/20 rounded-2xl backdrop-blur-sm shadow-inner overflow-hidden relative group">
@@ -182,10 +248,10 @@ export default function StudentDetailedPerformance({ studentName, studentId }: {
                 >
                     <div className="flex items-center gap-2 mb-2">
                         <Award className="w-5 h-5 text-amber-500" />
-                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Assessments</p>
+                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{t.assessments}</p>
                     </div>
                     <h4 className="text-3xl font-black text-foreground">{grades.length}</h4>
-                    <p className="text-xs text-muted-foreground mt-1">Total tests this term</p>
+                    <p className="text-xs text-muted-foreground mt-1">{t.totalTests}</p>
                 </motion.div>
             </div>
 
@@ -194,7 +260,7 @@ export default function StudentDetailedPerformance({ studentName, studentId }: {
                     <CardHeader className="pb-2">
                         <CardTitle className="text-lg font-bold flex items-center gap-2">
                             <BookOpen className="w-5 h-5 text-primary" />
-                            Subject Proficiency
+                            {t.subjectProf}
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -225,7 +291,7 @@ export default function StudentDetailedPerformance({ studentName, studentId }: {
                                 </div>
                             </motion.div>
                         )) : (
-                            <p className="text-center py-8 text-sm text-muted-foreground">No assessment data available yet.</p>
+                            <p className="text-center py-8 text-sm text-muted-foreground">{t.noAssessment}</p>
                         )}
                     </CardContent>
                 </Card>
@@ -234,7 +300,7 @@ export default function StudentDetailedPerformance({ studentName, studentId }: {
                     <CardHeader className="pb-2">
                         <CardTitle className="text-lg font-bold flex items-center gap-2">
                             <Calendar className="w-5 h-5 text-primary" />
-                            Recent Grades
+                            {t.recentGrades}
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
@@ -257,12 +323,12 @@ export default function StudentDetailedPerformance({ studentName, studentId }: {
                                     <p className="text-[10px] font-black text-muted-foreground uppercase">
                                         {new Date(grade.date).toLocaleDateString()}
                                     </p>
-                                    <Badge variant="outline" className="text-[8px] font-bold px-1.5 py-0 border-primary/20 text-primary">Score: {grade.score}</Badge>
+                                    <Badge variant="outline" className="text-[8px] font-bold px-1.5 py-0 border-primary/20 text-primary">{t.score}: {grade.score}</Badge>
                                 </div>
                             </motion.div>
                         ))}
                         {grades.length === 0 && (
-                            <p className="text-center py-8 text-sm text-muted-foreground">No grades recorded recently.</p>
+                            <p className="text-center py-8 text-sm text-muted-foreground">{t.noGrades}</p>
                         )}
                         <Button
                             disabled={isDownloading}
@@ -270,7 +336,7 @@ export default function StudentDetailedPerformance({ studentName, studentId }: {
                             variant="ghost"
                             className="w-full mt-2 py-2 text-[10px] font-black text-primary uppercase tracking-widest hover:underline transition-all h-auto"
                         >
-                            {isDownloading ? "Generating Report..." : "View Full Report Card"}
+                            {isDownloading ? t.genReport : t.viewReport}
                         </Button>
                     </CardContent>
                 </Card>
@@ -284,10 +350,10 @@ export default function StudentDetailedPerformance({ studentName, studentId }: {
                 <CardHeader className="pb-2 relative z-10">
                     <CardTitle className="text-xl font-black flex items-center gap-2 text-primary">
                         <TrendingUp className="w-6 h-6" />
-                        AI Academic Forecast
+                        {t.aiForecast}
                     </CardTitle>
                     <CardDescription className="text-primary/70 font-medium">
-                        Predictive analysis based on recent performance momentum
+                        {t.predictiveDesc}
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="relative z-10">
@@ -304,7 +370,7 @@ export default function StudentDetailedPerformance({ studentName, studentId }: {
                                 <div className="flex items-center justify-between mb-2">
                                     <div className="flex flex-col">
                                         <span className="text-2xl font-black text-foreground">{proj.projected}%</span>
-                                        <span className="text-[10px] font-bold text-muted-foreground uppercase">Projected</span>
+                                        <span className="text-[10px] font-bold text-muted-foreground uppercase">{t.projected}</span>
                                     </div>
                                     <Badge
                                         variant="secondary"
@@ -317,8 +383,8 @@ export default function StudentDetailedPerformance({ studentName, studentId }: {
                                 </div>
                                 <div className="space-y-1">
                                     <div className="flex justify-between text-[9px] font-bold text-muted-foreground uppercase">
-                                        <span>Current: {proj.current}%</span>
-                                        <span>Delta: {proj.projected - proj.current > 0 ? '+' : ''}{proj.projected - proj.current}%</span>
+                                        <span>{t.current}: {proj.current}%</span>
+                                        <span>{t.delta}: {proj.projected - proj.current > 0 ? '+' : ''}{proj.projected - proj.current}%</span>
                                     </div>
                                     <div className="h-1.5 w-full bg-primary/10 rounded-full overflow-hidden">
                                         <motion.div
@@ -332,7 +398,7 @@ export default function StudentDetailedPerformance({ studentName, studentId }: {
                             </motion.div>
                         )) : (
                             <p className="col-span-full text-center py-8 text-sm text-muted-foreground italic">
-                                Collecting more data points to generate accurate predictions...
+                                {t.collectingData}
                             </p>
                         )}
                     </div>
@@ -341,9 +407,9 @@ export default function StudentDetailedPerformance({ studentName, studentId }: {
                             <ArrowUpRight className="w-5 h-5 text-primary" />
                         </div>
                         <div>
-                            <p className="text-xs font-bold text-primary uppercase tracking-tight mb-1">CEO Insight</p>
+                            <p className="text-xs font-bold text-primary uppercase tracking-tight mb-1">{t.ceoInsight}</p>
                             <p className="text-sm text-muted-foreground leading-relaxed italic">
-                                "{studentName} is showing {projections.filter(p => p.trend === 'Improving').length > projections.filter(p => p.trend === 'Declining').length ? 'positive' : 'variable'} momentum in core subjects. Intervention in {projections.find(p => p.trend === 'Declining')?.subject || 'upcoming topics'} could maximize the final term result."
+                                "{studentName} {t.showing} {projections.filter(p => p.trend === 'Improving').length > projections.filter(p => p.trend === 'Declining').length ? t.positive : t.variable} {t.momentum} {projections.find(p => p.trend === 'Declining')?.subject || 'upcoming topics'} {t.couldMaximize}"
                             </p>
                         </div>
                     </div>

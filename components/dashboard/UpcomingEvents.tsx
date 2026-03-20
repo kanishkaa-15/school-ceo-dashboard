@@ -7,7 +7,25 @@ import { motion } from 'framer-motion'
 import { CalendarDays, Clock, MapPin, Loader2 } from 'lucide-react'
 import { API_URL } from '@/lib/api-config'
 
-export default function UpcomingEvents() {
+interface UpcomingEventsProps {
+    language?: 'en' | 'ta'
+}
+
+const translations = {
+    en: {
+        academicCalendar: "Academic Calendar",
+        upcoming: "Upcoming",
+        noEvents: "No upcoming events or deadlines."
+    },
+    ta: {
+        academicCalendar: "கற்கை நாள்காட்டி",
+        upcoming: "வரவிருக்கும்",
+        noEvents: "வரவிருக்கும் நிகழ்வுகள் அல்லது காலக்கெடு எதுவும் இல்லை."
+    }
+}
+
+export default function UpcomingEvents({ language = 'en' }: UpcomingEventsProps) {
+    const t = translations[language]
     const [events, setEvents] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
 
@@ -41,7 +59,7 @@ export default function UpcomingEvents() {
             <CardHeader className="pb-3 border-b border-border/30">
                 <CardTitle className="text-lg font-bold flex items-center gap-2">
                     <CalendarDays className="w-5 h-5 text-primary" />
-                    Academic Calendar
+                    {t.academicCalendar}
                 </CardTitle>
             </CardHeader>
             <CardContent className="pt-4 space-y-4 pb-6">
@@ -72,7 +90,7 @@ export default function UpcomingEvents() {
                                 </Badge>
                                 <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-bold italic">
                                     <Clock className="w-3 h-3" />
-                                    Upcoming
+                                    {t.upcoming}
                                 </div>
                             </div>
                             <h4 className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">
@@ -84,7 +102,7 @@ export default function UpcomingEvents() {
                         </div>
                     </motion.div>
                 )) : (
-                    <p className="text-center py-8 text-sm text-muted-foreground">No upcoming events or deadlines.</p>
+                    <p className="text-center py-8 text-sm text-muted-foreground">{t.noEvents}</p>
                 )}
             </CardContent>
         </Card>

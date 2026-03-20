@@ -1,6 +1,7 @@
 const xlsx = require('xlsx');
 const Admission = require('../models/Admission');
 const Grade = require('../models/Grade');
+const { sendPerformanceEmail } = require('../utils/emailService');
 
 /**
  * Service to parse Excel files and upsert student data into the Admission and Grade collections.
@@ -43,11 +44,11 @@ const importExcelData = async (filePath, io) => {
           studentDoc = await Admission.findOne({ studentId });
         }
         if (!studentDoc && studentName) {
-          studentDoc = await Admission.findOne({ 
-            studentName: { $regex: new RegExp(`^${studentName}$`, 'i') } 
+          studentDoc = await Admission.findOne({
+            studentName: { $regex: new RegExp(`^${studentName}$`, 'i') }
           });
         }
-        
+
         // If not found and no grade info in Excel, we can't create a new student
         if (!studentDoc && !gradeLevel) {
           results.failed++;
@@ -81,8 +82,8 @@ const importExcelData = async (filePath, io) => {
           const rawScore = row[subject];
           if (rawScore !== undefined && rawScore !== null && rawScore !== '-') {
             // Strip % if present and parse as number
-            let score = typeof rawScore === 'string' 
-              ? parseFloat(rawScore.replace(/[^\d.]/g, '')) 
+            let score = typeof rawScore === 'string'
+              ? parseFloat(rawScore.replace(/[^\d.]/g, ''))
               : parseFloat(rawScore);
 
             // Handle decimal percentages (0.85 -> 85)
@@ -105,16 +106,32 @@ const importExcelData = async (filePath, io) => {
 
               // Upsert Grade: Update existing 'Excel Sync' grade for this subject or create new
               const upsertResult = await Grade.findOneAndUpdate(
-                { 
-                  studentId: studentData.studentId, 
-                  subject, 
-                  title: 'Excel Sync' 
+                {
+                  studentId: studentData.studentId,
+                  subject,
+                  title: 'Excel Sync'
                 },
                 gradeData,
                 { upsert: true, new: true, setDefaultsOnInsert: true }
               );
               console.log(`Excel Service: Upserted grade for ${studentData.studentName} - ${subject}: ${score}`, upsertResult ? 'SUCCESS' : 'FAILED');
               results.gradesUpdated++;
+
+              // Send email notification for the imported grade
+              try {
+                if (studentData.email && studentData.email !== 'N/A') {
+                  await sendPerformanceEmail({
+                    parentEmail: studentData.email,
+                    studentName: studentData.studentName,
+                    subject,
+                    score,
+                    grade: gradeData.grade,
+                    title: 'Excel Sync'
+                  });
+                }
+              } catch (emailErr) {
+                console.error(`Excel Service: Failed to send notification for ${studentData.studentName}`, emailErr);
+              }
             }
           }
         }

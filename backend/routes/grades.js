@@ -1,6 +1,7 @@
 const express = require('express');
 const Grade = require('../models/Grade');
 const Admission = require('../models/Admission');
+const { sendPerformanceEmail } = require('../utils/emailService');
 const { protect } = require('../middleware/authMiddleware');
 const router = express.Router();
 
@@ -78,8 +79,37 @@ router.get('/id/:studentId', protect, async (req, res) => {
 // POST bulk grades
 router.post('/bulk', async (req, res) => {
     try {
-        const records = req.body; // Expecting array of { studentName, class, section, subject, grade, score, title, date }
+        const records = req.body; // Expecting array of { studentName, class, section, subject, grade, score, title, date, studentId }
         const result = await Grade.insertMany(records);
+
+        // Send email notifications to parents asynchronously
+        // We do this after insertion to ensure data is saved
+        for (const record of records) {
+            try {
+                // Find parent email from Admission record
+                const student = await Admission.findOne({
+                    $or: [
+                        { studentId: record.studentId },
+                        { studentName: { $regex: new RegExp(`^${record.studentName}$`, 'i') } }
+                    ]
+                });
+
+                if (student && student.email && student.email !== 'N/A') {
+                    await sendPerformanceEmail({
+                        parentEmail: student.email,
+                        studentName: record.studentName,
+                        subject: record.subject,
+                        score: record.score,
+                        grade: record.grade,
+                        title: record.title || 'Academic Assessment'
+                    });
+                }
+            } catch (emailErr) {
+                console.error(`Status: Failed to send notification for ${record.studentName}`, emailErr);
+                // We don't fail the whole request if one email fails
+            }
+        }
+
         res.status(201).json(result);
     } catch (error) {
         res.status(400).json({ message: error.message });
