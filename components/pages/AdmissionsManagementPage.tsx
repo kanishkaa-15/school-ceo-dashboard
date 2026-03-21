@@ -21,7 +21,8 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Search, Filter, Menu, Plus, Edit2, CheckSquare, XCircle, Trash2 } from 'lucide-react';
+import { Search, Filter, Menu, Plus, Edit2, CheckSquare, XCircle, Trash2, Download } from 'lucide-react';
+import { exportToCSV } from '@/lib/export-utils';
 import Sidebar from '@/components/dashboard/Sidebar';
 import CEOSidebar from '@/components/dashboard/CEOSidebar';
 import {
@@ -255,6 +256,22 @@ export default function AdmissionsManagementPage({ onNavigate }: AdmissionsManag
     }
   }
 
+  const handleExportCSV = () => {
+    const exportData = filteredApplications.map(a => ({
+      Applicant_ID: a._id,
+      Student_ID: a.studentId || 'N/A',
+      Student_Name: a.studentName,
+      Parent_Name: a.parentName,
+      Email: a.email,
+      Phone: a.phone,
+      Target_Grade: a.grade,
+      Target_Section: a.section || 'A',
+      Status: a.status,
+      Application_Date: new Date(a.applicationDate).toLocaleDateString(),
+    }));
+    exportToCSV(exportData, `Admissions_${new Date().toISOString().split('T')[0]}`);
+  }
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Approved':
@@ -355,19 +372,24 @@ export default function AdmissionsManagementPage({ onNavigate }: AdmissionsManag
               <CardHeader className="border-b border-border">
                 <div className="flex items-center justify-between">
                   <CardTitle>Applications ({applications.length} total)</CardTitle>
-                  {userRole === 'ceo' ? (
-                    <div className="bg-blue-50 border border-blue-200 rounded px-3 py-1">
-                      <span className="text-xs text-blue-800 font-medium">Read-Only View</span>
-                    </div>
-                  ) : (
-                    <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-                      <DialogTrigger asChild>
-                        <Button size="sm" onClick={handleAddApplication}>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add Application
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-md text-foreground">
+                  <div className="flex items-center gap-4">
+                    <Button variant="outline" size="sm" onClick={handleExportCSV}>
+                      <Download className="w-4 h-4 mr-2" />
+                      Export CSV
+                    </Button>
+                    {userRole === 'ceo' ? (
+                      <div className="bg-blue-50 border border-blue-200 rounded px-3 py-1">
+                        <span className="text-xs text-blue-800 font-medium">Read-Only View</span>
+                      </div>
+                    ) : (
+                      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+                        <DialogTrigger asChild>
+                          <Button size="sm" onClick={handleAddApplication}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Application
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-md text-foreground">
                         <DialogHeader>
                           <DialogTitle>
                             {editingId ? 'Edit Application' : 'Add New Application'}
@@ -469,6 +491,7 @@ export default function AdmissionsManagementPage({ onNavigate }: AdmissionsManag
                       </DialogContent>
                     </Dialog>
                   )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="p-6">

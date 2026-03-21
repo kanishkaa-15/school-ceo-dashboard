@@ -1,6 +1,8 @@
 const express = require('express');
 const Admission = require('../models/Admission');
 const { protect } = require('../middleware/authMiddleware');
+const { rbac } = require('../middleware/rbac');
+const AuditLog = require('../models/AuditLog');
 const router = express.Router();
 
 // GET all admissions (Protected)
@@ -54,7 +56,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST new admission (Protected)
-router.post('/', protect, async (req, res) => {
+router.post('/', protect, rbac(['ceo', 'admin']), async (req, res) => {
   try {
     const admissionData = { ...req.body };
 
@@ -83,6 +85,13 @@ router.post('/', protect, async (req, res) => {
       io.emit('newAdmission', admission);
     }
 
+    await AuditLog.create({
+      userId: req.user._id,
+      action: 'CREATE_DATA',
+      endpoint: '/api/admissions',
+      details: { admissionId: admission._id, studentName: admission.studentName }
+    });
+
     res.status(201).json(admission);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -90,7 +99,7 @@ router.post('/', protect, async (req, res) => {
 });
 
 // PUT update admission (Protected)
-router.put('/:id', protect, async (req, res) => {
+router.put('/:id', protect, rbac(['ceo', 'admin']), async (req, res) => {
   try {
     const admission = await Admission.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!admission) return res.status(404).json({ message: 'Admission not found' });
@@ -102,6 +111,13 @@ router.put('/:id', protect, async (req, res) => {
       console.log('AdmissionsRoute: updateAdmission event emitted');
     }
 
+    await AuditLog.create({
+      userId: req.user._id,
+      action: 'UPDATE_DATA',
+      endpoint: `/api/admissions/${req.params.id}`,
+      details: { admissionId: admission._id }
+    });
+
     res.json(admission);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -109,7 +125,7 @@ router.put('/:id', protect, async (req, res) => {
 });
 
 // DELETE admission (Protected)
-router.delete('/:id', protect, async (req, res) => {
+router.delete('/:id', protect, rbac(['ceo', 'admin']), async (req, res) => {
   try {
     const admission = await Admission.findByIdAndDelete(req.params.id);
     if (!admission) return res.status(404).json({ message: 'Admission not found' });
@@ -119,6 +135,13 @@ router.delete('/:id', protect, async (req, res) => {
     if (io) {
       io.emit('deleteAdmission', { id: req.params.id });
     }
+
+    await AuditLog.create({
+      userId: req.user._id,
+      action: 'DELETE_DATA',
+      endpoint: `/api/admissions/${req.params.id}`,
+      details: { admissionId: req.params.id }
+    });
 
     res.json({ message: 'Admission deleted' });
   } catch (error) {

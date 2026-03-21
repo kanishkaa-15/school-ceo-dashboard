@@ -12,7 +12,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Search, Filter, ChevronDown, Menu, Edit2, Zap, Send, TrendingUp } from 'lucide-react';
+import { Search, Filter, ChevronDown, Menu, Edit2, Zap, Send, TrendingUp, Download } from 'lucide-react';
+import { exportToCSV } from '@/lib/export-utils';
 import { generateSmartReply, Sentiment } from '@/lib/ai-utils';
 import {
   Collapsible,
@@ -44,11 +45,12 @@ interface ParentQuery {
   priority: 'Low' | 'Medium' | 'High';
   response?: string;
   assignedTo?: string;
+  category?: string;
   createdAt: string;
 }
 
 interface ParentQueriesManagementPageProps {
-  onNavigate: (page: 'dashboard' | 'staff' | 'admissions' | 'queries' | 'admin' | 'student-performance') => void
+  onNavigate: (page: 'dashboard' | 'staff' | 'admissions' | 'queries' | 'admin' | 'student-performance' | 'admin-audit') => void
 }
 
 export default function ParentQueriesManagementPage({ onNavigate }: ParentQueriesManagementPageProps) {
@@ -194,6 +196,23 @@ export default function ParentQueriesManagementPage({ onNavigate }: ParentQuerie
     })
   }
 
+  const handleExportCSV = () => {
+    const exportData = filteredQueries.map(q => ({
+      ID: q._id,
+      Parent_Name: q.parentName,
+      Student_Name: q.studentName,
+      Email: q.email,
+      Phone: q.phone,
+      Category: q.category || 'N/A',
+      Subject: q.subject,
+      Status: q.status,
+      Priority: q.priority,
+      Submitted_Date: new Date(q.createdAt).toLocaleDateString(),
+      Assigned_To: q.assignedTo || 'Unassigned'
+    }));
+    exportToCSV(exportData, `Parent_Queries_${new Date().toISOString().split('T')[0]}`);
+  }
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Resolved':
@@ -307,8 +326,14 @@ export default function ParentQueriesManagementPage({ onNavigate }: ParentQuerie
               <CardHeader className="border-b border-border">
                 <div className="flex items-center justify-between">
                   <CardTitle>Queries List ({queries.length} total)</CardTitle>
-                  <div className="bg-blue-50 border border-blue-200 rounded px-3 py-1">
-                    <span className="text-xs text-blue-800 font-medium">Status Management Only</span>
+                  <div className="flex items-center gap-4">
+                    <Button variant="outline" size="sm" onClick={handleExportCSV}>
+                      <Download className="w-4 h-4 mr-2" />
+                      Export CSV
+                    </Button>
+                    <div className="bg-blue-50 border border-blue-200 rounded px-3 py-1">
+                      <span className="text-xs text-blue-800 font-medium">Status Management Only</span>
+                    </div>
                   </div>
                 </div>
               </CardHeader>

@@ -4,49 +4,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { PieChart, Pie, Cell, Legend, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
 import { Users, UserCheck, UserX, Briefcase, PieChart as PieIcon, BarChart3, Loader2, ChevronRight } from 'lucide-react'
-import { useState, useEffect } from 'react'
-import { API_URL } from '@/lib/api-config'
+import { useData } from '@/context/DataContext'
 
 export default function StaffDetails() {
-  const [staffData, setStaffData] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const { staff } = useData()
 
-  useEffect(() => {
-    fetchStaffData()
-  }, [])
+  if (!staff) return null;
 
-  const fetchStaffData = async () => {
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${API_URL}/staff`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-      const data = await response.json()
-      setStaffData(Array.isArray(data) ? data : [])
-    } catch (error) {
-      console.error('Error fetching staff data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  if (loading) {
-    return (
-      <Card className="bg-card border-border/50 animate-pulse">
-        <CardHeader className="pb-2">
-          <div className="h-6 w-32 bg-secondary rounded mb-2" />
-          <div className="h-4 w-48 bg-secondary rounded" />
-        </CardHeader>
-        <CardContent className="h-[400px] flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary/50" />
-        </CardContent>
-      </Card>
-    )
-  }
-
-  const safeStaff = Array.isArray(staffData) ? staffData : []
+  const safeStaff = Array.isArray(staff) ? staff : []
   const totalStaff = safeStaff.length
   const activeStaff = safeStaff.filter(s => s.status === 'Active').length
   const inactiveStaff = safeStaff.filter(s => s.status === 'Inactive').length

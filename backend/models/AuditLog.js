@@ -9,7 +9,7 @@ const auditLogSchema = new mongoose.Schema({
     action: {
         type: String,
         required: true,
-        enum: ['GENERATED_REPORT', 'EXPORT_DATA', 'VIEW_SENSITIVE']
+        enum: ['GENERATED_REPORT', 'EXPORT_DATA', 'VIEW_SENSITIVE', 'CREATE_DATA', 'UPDATE_DATA', 'DELETE_DATA']
     },
     endpoint: {
         type: String,

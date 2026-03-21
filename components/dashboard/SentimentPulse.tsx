@@ -10,6 +10,13 @@ interface SentimentPulseProps {
   queries: any[]
 }
 
+const CATEGORIES = [
+  { id: 'academic', label: 'Academic Standards', score: 82, trend: 'stable' },
+  { id: 'facilities', label: 'Facility Infrastructure', score: 88, trend: 'up' },
+  { id: 'financial', label: 'Tuition & Billing', score: 64, trend: 'down' },
+  { id: 'safety', label: 'Campus Safety', score: 91, trend: 'up' },
+]
+
 export default function SentimentPulse({ queries }: SentimentPulseProps) {
   const total = queries.length || 1
   const positive = queries.filter(q => q.sentiment === 'Positive').length
@@ -40,8 +47,8 @@ export default function SentimentPulse({ queries }: SentimentPulseProps) {
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-xl font-bold text-foreground">Community Pulse</CardTitle>
-            <CardDescription>Real-time stakeholder sentiment analysis</CardDescription>
+            <CardTitle className="text-xl font-bold text-foreground">AI Parent Sentiment Pulse</CardTitle>
+            <CardDescription className="text-[10px] font-black uppercase tracking-widest text-primary/60 mt-1">Neural Tone Detection Active</CardDescription>
           </div>
           <div className="p-2 bg-primary/10 rounded-lg">
             <Activity className="w-5 h-5 text-primary" />
@@ -53,14 +60,13 @@ export default function SentimentPulse({ queries }: SentimentPulseProps) {
         <div className="flex items-center justify-center py-4">
           <div className="relative">
             <motion.div
-              animate={{ 
+              animate={{
                 scale: [1, 1.1, 1],
                 opacity: [0.1, 0.3, 0.1]
               }}
               transition={{ repeat: Infinity, duration: 2 }}
-              className={`absolute inset-0 rounded-full blur-2xl ${
-                pulseScore >= 70 ? 'bg-emerald-500' : pulseScore >= 40 ? 'bg-amber-500' : 'bg-rose-500'
-              }`}
+              className={`absolute inset-0 rounded-full blur-2xl ${pulseScore >= 70 ? 'bg-emerald-500' : pulseScore >= 40 ? 'bg-amber-500' : 'bg-rose-500'
+                }`}
             />
             <div className="relative text-center">
               <span className={`text-6xl font-black ${getPulseColor(pulseScore)} leading-none`}>
@@ -76,15 +82,15 @@ export default function SentimentPulse({ queries }: SentimentPulseProps) {
         {/* Breakdown */}
         <div className="space-y-4">
           {[
-            { label: 'Positive', value: positivePercent, icon: Smile, color: 'text-emerald-500', barBg: 'bg-emerald-500' },
-            { label: 'Neutral', value: neutralPercent, icon: Meh, color: 'text-amber-500', barBg: 'bg-amber-500' },
-            { label: 'Concerned', value: concernedPercent, icon: Frown, color: 'text-rose-500', barBg: 'bg-rose-500' },
+            { label: 'Positive', value: positivePercent, icon: Smile, color: 'text-emerald-500', barBg: 'bg-emerald-500', subtext: 'Constructive Feedback' },
+            { label: 'Neutral', value: neutralPercent, icon: Meh, color: 'text-amber-500', barBg: 'bg-amber-500', subtext: 'Inquisitive Tones' },
+            { label: 'Concerned', value: concernedPercent, icon: Frown, color: 'text-rose-500', barBg: 'bg-rose-500', subtext: 'High-Priority Resolution' },
           ].map((item) => (
             <div key={item.label} className="space-y-1.5">
               <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-tight">
                 <div className="flex items-center gap-1.5">
                   <item.icon className={`w-3.5 h-3.5 ${item.color}`} />
-                  <span className="text-muted-foreground">{item.label}</span>
+                  <span className="text-muted-foreground">{item.label} <span className="text-[8px] opacity-40 lowercase italic font-medium ml-1">({item.subtext})</span></span>
                 </div>
                 <span className="text-foreground">{item.value}%</span>
               </div>
@@ -93,11 +99,35 @@ export default function SentimentPulse({ queries }: SentimentPulseProps) {
                   initial={{ width: 0 }}
                   animate={{ width: `${item.value}%` }}
                   transition={{ duration: 1, ease: 'easeOut' }}
-                  className={`h-full ${item.barBg}`}
-                />
+                  className={`h-full ${item.barBg} relative overflow-hidden`}
+                >
+                  <motion.div
+                    animate={{ x: ['-100%', '100%'] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                  />
+                </motion.div>
               </div>
             </div>
           ))}
+        </div>
+
+        {/* AI Category Insights */}
+        <div className="pt-6 border-t border-border/30">
+          <h4 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-4">Sector-wise AI Health</h4>
+          <div className="grid grid-cols-2 gap-3">
+            {CATEGORIES.map((cat) => (
+              <div key={cat.id} className="p-3 bg-secondary/20 rounded-xl border border-border/10">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[8px] font-black uppercase tracking-tighter text-muted-foreground truncate max-w-[80px]">{cat.label}</span>
+                  <span className={`text-[8px] font-bold ${cat.score > 80 ? 'text-emerald-500' : cat.score > 70 ? 'text-amber-500' : 'text-rose-500'}`}>{cat.score}%</span>
+                </div>
+                <div className="w-full h-1 bg-secondary rounded-full overflow-hidden">
+                  <div className={`h-full ${cat.score > 80 ? 'bg-emerald-500' : cat.score > 70 ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${cat.score}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Velocity Indicator */}
@@ -108,7 +138,7 @@ export default function SentimentPulse({ queries }: SentimentPulseProps) {
             </div>
             <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Sentiment Velocity</span>
           </div>
-          <Badge variant="outline" className="text-[9px] font-bold border-none bg-primary/5 text-primary">Quantum Monitor Active</Badge>
+          <Badge variant="outline" className="text-[9px] font-bold border-none bg-primary/20 text-primary animate-pulse">Neural Monitor Locked</Badge>
         </div>
       </CardContent>
     </Card>

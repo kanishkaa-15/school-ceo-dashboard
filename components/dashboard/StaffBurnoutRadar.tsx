@@ -100,7 +100,7 @@ export default function StaffBurnoutRadar() {
                                     initial={{ opacity: 0, scale: 0.95 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     transition={{ delay: idx * 0.1 }}
-                                    key={staff.id}
+                                    key={staff._id || staff.id || idx}
                                     className={`p-4 rounded-xl border flex flex-col gap-3 group/item transition-all hover:translate-x-1 ${staff.riskBorder} bg-white/5`}
                                 >
                                     <div className="flex items-start justify-between">

@@ -43,6 +43,7 @@ export interface ParentQuery {
   createdDate?: string
   createdAt?: string
   response?: string
+  sentiment?: string
 }
 
 interface DataContextType {
@@ -60,6 +61,19 @@ interface DataContextType {
   addQuery: (query: Partial<ParentQuery> & Omit<ParentQuery, 'id'>) => void
   updateQuery: (id: string, query: Omit<ParentQuery, 'id'>) => void
   deleteQuery: (id: string) => void
+
+  notifications: AppNotification[]
+  markNotificationRead: (id: string) => void
+  markAllRead: () => void
+}
+
+export interface AppNotification {
+  id: string
+  title: string
+  message: string
+  type: 'info' | 'success' | 'warning' | 'error'
+  read: boolean
+  timestamp: Date
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined)
@@ -68,6 +82,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [admissions, setAdmissions] = useState<AdmissionApplication[]>([])
   const [queries, setQueries] = useState<ParentQuery[]>([])
+  const [notifications, setNotifications] = useState<AppNotification[]>([])
+
+  const addLocalNotification = (notif: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => {
+    setNotifications(prev => [{
+      ...notif, 
+      id: Date.now().toString() + Math.random().toString(), 
+      timestamp: new Date(), 
+      read: false 
+    }, ...prev].slice(0, 50))
+  }
+
+  const markNotificationRead = (id: string) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
+  }
+
+  const markAllRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+  }
 
   useEffect(() => {
     // 1. Initial REST API Fetch
@@ -109,6 +141,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
         if (exists) return prev
         return [newQuery, ...prev]
       })
+      addLocalNotification({
+        title: 'New Stakeholder Query',
+        message: `From: ${newQuery.parentName} - ${newQuery.subject}`,
+        type: 'warning'
+      })
     })
 
     socket.on('newAdmission', (newAdmission: AdmissionApplication) => {
@@ -118,6 +155,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
         if (exists) return prev
         return [newAdmission, ...prev]
       })
+      addLocalNotification({
+        title: 'New Admission Application',
+        message: `${newAdmission.studentName} applying for ${newAdmission.appliedFor}`,
+        type: 'info'
+      })
+    })
+
+    socket.on('health_index_updated', (data: any) => {
+      addLocalNotification({
+        title: 'Health Index Recalculated',
+        message: `System health is now ${data.overallScore}% (${data.riskLevel})`,
+        type: data.riskLevel === 'HIGH' ? 'error' : data.riskLevel === 'MEDIUM' ? 'warning' : 'success'
+      })
     })
 
     socket.on('updateQuery', (updatedQuery: ParentQuery) => {
@@ -126,6 +176,36 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     socket.on('updateAdmission', (updatedAdmission: AdmissionApplication) => {
       setAdmissions(prev => prev.map(a => (a._id === updatedAdmission._id || a.id === updatedAdmission.id) ? updatedAdmission : a))
+    })
+
+    socket.on('deleteQuery', (data: { id: string }) => {
+      setQueries(prev => prev.filter(q => q._id !== data.id && q.id !== data.id))
+    })
+
+    socket.on('deleteAdmission', (data: { id: string }) => {
+      setAdmissions(prev => prev.filter(a => a._id !== data.id && a.id !== data.id))
+    })
+
+    socket.on('newStaff', (newStaffMember: StaffMember) => {
+      console.log('Real-Time Context: Received newStaff payload')
+      setStaff(prev => {
+        const exists = prev.some(s => s._id === newStaffMember._id || s.id === newStaffMember.id)
+        if (exists) return prev
+        return [newStaffMember, ...prev]
+      })
+      addLocalNotification({
+        title: 'New Staff Member Onboarded',
+        message: `${newStaffMember.name} joined as ${newStaffMember.position}`,
+        type: 'success'
+      })
+    })
+
+    socket.on('updateStaff', (updatedStaff: StaffMember) => {
+      setStaff(prev => prev.map(s => (s._id === updatedStaff._id || s.id === updatedStaff.id) ? updatedStaff : s))
+    })
+
+    socket.on('deleteStaff', (data: { id: string }) => {
+      setStaff(prev => prev.filter(s => s._id !== data.id && s.id !== data.id))
     })
 
     return () => {
@@ -159,6 +239,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       staff, addStaff, updateStaff, deleteStaff,
       admissions, addAdmission, updateAdmission, deleteAdmission,
       queries, addQuery, updateQuery, deleteQuery,
+      notifications, markNotificationRead, markAllRead
     }}>
       {children}
     </DataContext.Provider>

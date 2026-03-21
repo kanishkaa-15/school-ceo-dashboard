@@ -48,6 +48,9 @@ import AtRiskStudentsWidget from '@/components/dashboard/AtRiskStudentsWidget'
 import CampusLeaderboardWidget from '@/components/dashboard/CampusLeaderboardWidget'
 import StaffBurnoutRadar from '@/components/dashboard/StaffBurnoutRadar'
 import CEOCopilot from '@/components/dashboard/CEOCopilot'
+import ExecutiveBriefing from '@/components/dashboard/ExecutiveBriefing'
+import ResourceForecast from '@/components/dashboard/ResourceForecast'
+import NotificationBell from '@/components/dashboard/NotificationBell'
 
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -74,7 +77,7 @@ export default function DashboardPage({ onLogout, onNavigate }: DashboardPagePro
   const [drillDownType, setDrillDownType] = useState<'students' | 'staff' | 'admissions' | 'queries' | null>(null)
   const [isSyncing, setIsSyncing] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [widgetOrder, setWidgetOrder] = useState(['health', 'predictive-insights', 'burnout-radar', 'growth-forecast', 'retention', 'trust', 'teaching', 'performance', 'student-achievements', 'operations', 'school-achievements', 'feedback', 'sentiment'])
+  const [widgetOrder, setWidgetOrder] = useState(['health', 'resource-forecast', 'predictive-insights', 'burnout-radar', 'growth-forecast', 'retention', 'trust', 'teaching', 'performance', 'student-achievements', 'operations', 'school-achievements', 'feedback', 'sentiment'])
   const [healthData, setHealthData] = useState<any>(null)
 
   // Chrono-Slider State (-6 to +6 months)
@@ -220,6 +223,19 @@ export default function DashboardPage({ onLogout, onNavigate }: DashboardPagePro
             </div>
           </section>
         )
+      case 'resource-forecast':
+        return (
+          <section key="resource-forecast" className="space-y-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-1.5 h-10 bg-indigo-500 rounded-full" />
+              <div>
+                <h3 className="text-2xl font-black tracking-tighter text-foreground uppercase italic leading-none">Resource Forecasting</h3>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] opacity-60 mt-1">AI-driven capacity and budget predictions</p>
+              </div>
+            </div>
+            <ResourceForecast />
+          </section>
+        )
       case 'growth': return null // Combined in health for layout
       case 'predictive-insights':
         return (
@@ -358,7 +374,18 @@ export default function DashboardPage({ onLogout, onNavigate }: DashboardPagePro
           </section>
         )
       case 'sentiment':
-        return null // Integrated in health section for layout symmetry
+        return (
+          <section key="sentiment" className="space-y-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-1.5 h-10 bg-primary/40 rounded-full" />
+              <div>
+                <h3 className="text-2xl font-black tracking-tighter text-foreground uppercase italic px-1">Social Intelligence</h3>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] opacity-60">Real-time stakeholder neural pulse</p>
+              </div>
+            </div>
+            <SentimentPulse queries={queries} />
+          </section>
+        )
       default: return null
     }
   }
@@ -409,6 +436,9 @@ export default function DashboardPage({ onLogout, onNavigate }: DashboardPagePro
               </div>
               <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest group-hover:text-primary transition-colors">Quantum Link Active</span>
             </motion.div>
+            
+            <NotificationBell />
+
             <Button
               onClick={onLogout}
               variant="ghost"
@@ -567,6 +597,9 @@ export default function DashboardPage({ onLogout, onNavigate }: DashboardPagePro
               <TrendingUp className="absolute bottom-[-10%] right-[-5%] w-80 h-80 text-white/5 group-hover:scale-110 transition-transform duration-1000 origin-bottom-right" />
             </div>
 
+            {/* Executive AI Briefing */}
+            <ExecutiveBriefing />
+
             {/* Quick Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {filteredStats.map((stat) => (
@@ -637,28 +670,38 @@ export default function DashboardPage({ onLogout, onNavigate }: DashboardPagePro
         <DialogContent className="max-w-4xl p-0 overflow-hidden bg-white/70 dark:bg-slate-950/80 backdrop-blur-3xl border-white/10 dark:border-slate-800/50 rounded-[2.5rem] shadow-2xl">
           <div className="p-8 sm:p-12 space-y-8">
             <DialogHeader>
-              <div className="flex items-center gap-4 mb-2">
-                <div className={`p-4 rounded-2xl ${drillDownType === 'students' ? 'bg-blue-500/20 text-blue-500' :
-                  drillDownType === 'staff' ? 'bg-purple-500/20 text-purple-500' :
-                    drillDownType === 'admissions' ? 'bg-emerald-500/20 text-emerald-500' :
-                      'bg-amber-500/20 text-amber-500'
-                  }`}>
-                  {drillDownType === 'students' && <GraduationCap className="w-8 h-8" />}
-                  {drillDownType === 'staff' && <Users className="w-8 h-8" />}
-                  {drillDownType === 'admissions' && <BookOpen className="w-8 h-8" />}
-                  {drillDownType === 'queries' && <MessageSquare className="w-8 h-8" />}
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-4">
+                  <div className={`p-4 rounded-2xl ${drillDownType === 'students' ? 'bg-blue-500/20 text-blue-500' :
+                    drillDownType === 'staff' ? 'bg-purple-500/20 text-purple-500' :
+                      drillDownType === 'admissions' ? 'bg-emerald-500/20 text-emerald-500' :
+                        'bg-amber-500/20 text-amber-500'
+                    }`}>
+                    {drillDownType === 'students' && <GraduationCap className="w-8 h-8" />}
+                    {drillDownType === 'staff' && <Users className="w-8 h-8" />}
+                    {drillDownType === 'admissions' && <BookOpen className="w-8 h-8" />}
+                    {drillDownType === 'queries' && <MessageSquare className="w-8 h-8" />}
+                  </div>
+                  <div>
+                    <DialogTitle className="text-4xl font-black tracking-tighter uppercase italic px-1">
+                      {drillDownType === 'students' ? 'Student Inventory' :
+                        drillDownType === 'staff' ? 'Staff Directory' :
+                          drillDownType === 'admissions' ? 'Admission Pipeline' :
+                            'Stakeholder Queries'}
+                    </DialogTitle>
+                    <DialogDescription className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60 px-1">
+                      System-wide data drill-down vector
+                    </DialogDescription>
+                  </div>
                 </div>
-                <div>
-                  <DialogTitle className="text-4xl font-black tracking-tighter uppercase italic px-1">
-                    {drillDownType === 'students' ? 'Student Inventory' :
-                      drillDownType === 'staff' ? 'Staff Directory' :
-                        drillDownType === 'admissions' ? 'Admission Pipeline' :
-                          'Stakeholder Queries'}
-                  </DialogTitle>
-                  <DialogDescription className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60 px-1">
-                    System-wide data drill-down vector
-                  </DialogDescription>
-                </div>
+                {drillDownType !== 'students' && (
+                  <Button
+                    onClick={() => onNavigate(drillDownType as 'staff' | 'admissions' | 'queries')}
+                    className="rounded-xl h-10 px-4 font-black text-[10px] uppercase tracking-widest bg-white/10 text-foreground hover:bg-primary/20 hover:text-primary transition-colors border border-white/10 dark:border-slate-800"
+                  >
+                    Manage Database
+                  </Button>
+                )}
               </div>
             </DialogHeader>
 
@@ -666,12 +709,12 @@ export default function DashboardPage({ onLogout, onNavigate }: DashboardPagePro
               <div className="space-y-4">
                 {drillDownType === 'students' && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {Array.from({ length: 20 }).map((_, i) => (
+                    {Array.from({ length: Math.min(20, studentsCount || 20) }).map((_, i) => (
                       <div key={i} className="p-4 rounded-2xl bg-white/30 dark:bg-slate-800/40 border border-white/5 flex items-center justify-between hover:border-primary/40 transition-all cursor-pointer group">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-black text-xs">S</div>
                           <div>
-                            <p className="text-xs font-black uppercase text-foreground">Student Name {i + 1}</p>
+                            <p className="text-xs font-black uppercase text-foreground">Student Tracker {i + 1}</p>
                             <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Class {6 + (i % 7)} - Section {['A', 'B', 'C'][i % 3]}</p>
                           </div>
                         </div>
@@ -680,17 +723,59 @@ export default function DashboardPage({ onLogout, onNavigate }: DashboardPagePro
                     ))}
                   </div>
                 )}
-                {/* Fallback/Placeholder for others */}
-                {drillDownType !== 'students' && (
-                  <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-                    <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center animate-pulse">
-                      <RefreshCw className="w-8 h-8 text-muted-foreground/40" />
+
+                {drillDownType === 'staff' && (
+                  staff.length === 0 ? <p className="text-sm text-center text-muted-foreground italic py-10">No staff records synchronized.</p> :
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {staff.map((s) => (
+                        <div key={s._id || s.id} className="p-4 rounded-2xl bg-white/30 dark:bg-slate-800/40 border border-white/5 flex items-center justify-between hover:border-purple-500/40 transition-all cursor-pointer group">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500 font-black text-xs">{s.name.charAt(0).toUpperCase()}</div>
+                            <div>
+                              <p className="text-xs font-black uppercase text-foreground">{s.name}</p>
+                              <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest truncate max-w-[150px]">{s.position} • {s.department}</p>
+                            </div>
+                          </div>
+                          <Badge variant="outline" className={`text-[8px] font-black uppercase tracking-tighter border-none ${s.status === 'Active' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>{s.status}</Badge>
+                        </div>
+                      ))}
                     </div>
-                    <div>
-                      <p className="text-sm font-black uppercase tracking-widest text-foreground">Data Stream Encrypted</p>
-                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-tighter mt-1 opacity-60">Vector expansion in progress...</p>
+                )}
+
+                {drillDownType === 'admissions' && (
+                  admissions.length === 0 ? <p className="text-sm text-center text-muted-foreground italic py-10">No admission pipeline data.</p> :
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {admissions.map((a) => (
+                        <div key={a._id || a.id} className="p-4 rounded-2xl bg-white/30 dark:bg-slate-800/40 border border-white/5 flex items-center justify-between hover:border-emerald-500/40 transition-all cursor-pointer group">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 font-black text-xs">{a.studentName.charAt(0).toUpperCase()}</div>
+                            <div>
+                              <p className="text-xs font-black uppercase text-foreground">{a.studentName}</p>
+                              <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Applying: {a.appliedFor}</p>
+                            </div>
+                          </div>
+                          <Badge variant="outline" className={`text-[8px] font-black uppercase tracking-tighter border-none ${a.status === 'Approved' ? 'bg-emerald-500/10 text-emerald-500' : a.status === 'Pending' ? 'bg-amber-500/10 text-amber-500' : 'bg-rose-500/10 text-rose-500'}`}>{a.status}</Badge>
+                        </div>
+                      ))}
                     </div>
-                  </div>
+                )}
+
+                {drillDownType === 'queries' && (
+                  queries.length === 0 ? <p className="text-sm text-center text-muted-foreground italic py-10">No open stakeholder queries.</p> :
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {queries.map((q) => (
+                        <div key={q._id || q.id} className="p-4 rounded-2xl bg-white/30 dark:bg-slate-800/40 border border-white/5 flex flex-col justify-center hover:border-amber-500/40 transition-all cursor-pointer group">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-xs font-black uppercase text-foreground">{q.subject}</p>
+                            <Badge variant="outline" className={`text-[8px] font-black uppercase tracking-tighter border-none ${q.priority === 'High' ? 'bg-rose-500/10 text-rose-500' : q.priority === 'Medium' ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'}`}>{q.priority}</Badge>
+                          </div>
+                          <div className="flex justify-between items-end">
+                            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">From: {q.parentName}</p>
+                            <p className="text-[8px] font-bold text-muted-foreground uppercase">{q.status}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                 )}
               </div>
             </ScrollArea>

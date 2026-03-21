@@ -15,6 +15,7 @@ const Attendance = require('../models/Attendance');
 const { calculateStudentRisk, projectAcademicOutcome } = require('../utils/predictiveAnalytics');
 const { getTacticalInsights } = require('../utils/aiInsights');
 const { createSecureStamp } = require('../utils/auditVault');
+const { generateResourceForecast } = require('../utils/aiForecast');
 
 const router = express.Router();
 
@@ -84,7 +85,7 @@ router.get('/retention', protect, rbac(['ceo', 'admin']), cacheMiddleware, async
 });
 
 // GET annual strategic outlook (Dynamic Data only)
-router.get('/annual-outlook', protect, rbac(['ceo', 'admin']), async (req, res) => {
+router.get('/annual-outlook', protect, rbac(['ceo', 'admin']), cacheMiddleware, async (req, res) => {
   console.log('API: GET /annual-outlook triggered');
   try {
     const months = [];
@@ -291,7 +292,7 @@ router.get('/health-index', protect, rbac(['ceo', 'admin']), cacheMiddleware, as
 });
 
 // GET parent trust index (Protected)
-router.get('/parent-trust', protect, rbac(['ceo', 'admin']), async (req, res) => {
+router.get('/parent-trust', protect, rbac(['ceo', 'admin']), cacheMiddleware, async (req, res) => {
   try {
     const totalQueries = await Query.countDocuments();
     const resolvedQueries = await Query.countDocuments({ status: 'Resolved' });
@@ -309,7 +310,7 @@ router.get('/parent-trust', protect, rbac(['ceo', 'admin']), async (req, res) =>
 });
 
 // GET automated risk assessment for all approved students (Protected)
-router.get('/predictions/risk-assessment', protect, rbac(['ceo', 'admin', 'staff']), async (req, res) => {
+router.get('/predictions/risk-assessment', protect, rbac(['ceo', 'admin', 'staff']), cacheMiddleware, async (req, res) => {
   try {
     const { grade, section } = req.query;
 
@@ -366,6 +367,28 @@ router.get('/predictions/grade-projection/:id', protect, async (req, res) => {
   }
 });
 
+// GET resource forecast
+router.get('/predictions/resource-forecast', protect, rbac(['ceo', 'admin']), cacheMiddleware, async (req, res) => {
+  try {
+    const totalAdmissions = await Admission.countDocuments();
+    const totalStaff = await Staff.countDocuments();
+    const activeStaff = await Staff.countDocuments({ status: 'Active' });
+    const queries = await Query.countDocuments({ status: { $in: ['Open', 'Pending'] } });
+
+    const staffRetention = totalStaff > 0 ? ((activeStaff / totalStaff) * 100).toFixed(1) : 0;
+    
+    const forecast = await generateResourceForecast({
+        admissions: totalAdmissions,
+        staffRetention,
+        queries
+    });
+    
+    res.json(forecast);
+  } catch (error) {
+    res.status(500).json({ message: 'Resource forecast failed', error: error.message });
+  }
+});
+
 // POST manually trigger institutional annual strategic report
 router.post('/generate-report', protect, rbac(['ceo']), async (req, res) => {
   try {
@@ -382,7 +405,7 @@ router.post('/generate-report', protect, rbac(['ceo']), async (req, res) => {
   }
 });
 // GET Audit Logs (Admin/CEO only)
-router.get('/audit-logs', protect, rbac(['ceo', 'admin']), async (req, res) => {
+router.get('/audit-logs', protect, rbac(['ceo', 'admin']), cacheMiddleware, async (req, res) => {
   try {
     const logs = await AuditLog.find()
       .populate('userId', 'name email role')
