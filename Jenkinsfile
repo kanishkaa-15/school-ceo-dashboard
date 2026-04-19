@@ -19,7 +19,7 @@ pipeline {
                     branches: [[name: '*/main']],
                     userRemoteConfigs: [[
                         url: 'https://github.com/kanishkaa-15/school-ceo-dashboard.git',
-                        credentialsId: 'ghcr-token1'
+                        credentialsId: 'ghcr-credentials1'
                     ]]
                 ])
             }
@@ -76,7 +76,7 @@ pipeline {
             steps {
                 echo '📤 Pushing images to GitHub Container Registry...'
                 withCredentials([usernamePassword(
-                    credentialsId: 'ghcr-token1',
+                    credentialsId: 'ghcr-credentials1',
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
