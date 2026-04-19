@@ -94,17 +94,15 @@ pipeline {
             steps {
                 echo '☸️  Deploying to Kubernetes cluster...'
                 sh """
-                    # kubectl installed at /var/jenkins_home/kubectl inside Jenkins container
-                    export KUBECTL=/var/jenkins_home/kubectl
-
-                    \$KUBECTL version --client || { echo '❌ kubectl not found'; exit 1; }
+                    # Use kubectl installed inside Jenkins container
+                    /var/jenkins_home/kubectl --kubeconfig=/var/jenkins_home/.kube/config version --client
 
                     (sed -i '' 's|school-ceo-backend:latest|${IMAGE_BACKEND}:${IMAGE_TAG}|g' k8s/backend.yaml 2>/dev/null) || sed -i 's|school-ceo-backend:latest|${IMAGE_BACKEND}:${IMAGE_TAG}|g' k8s/backend.yaml
                     (sed -i '' 's|school-ceo-frontend:latest|${IMAGE_FRONTEND}:${IMAGE_TAG}|g' k8s/frontend.yaml 2>/dev/null) || sed -i 's|school-ceo-frontend:latest|${IMAGE_FRONTEND}:${IMAGE_TAG}|g' k8s/frontend.yaml
 
-                    \$KUBECTL apply -f k8s/
-                    \$KUBECTL rollout status deployment/backend  --timeout=120s
-                    \$KUBECTL rollout status deployment/frontend --timeout=120s
+                    /var/jenkins_home/kubectl --kubeconfig=/var/jenkins_home/.kube/config apply -f k8s/
+                    /var/jenkins_home/kubectl --kubeconfig=/var/jenkins_home/.kube/config rollout status deployment/backend  --timeout=120s
+                    /var/jenkins_home/kubectl --kubeconfig=/var/jenkins_home/.kube/config rollout status deployment/frontend --timeout=120s
                 """
             }
         }
