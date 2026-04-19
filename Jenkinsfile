@@ -64,8 +64,12 @@ pipeline {
         stage('Docker Push') {
             steps {
                 echo '📤 Pushing images to GitHub Container Registry...'
-                withCredentials([string(credentialsId: 'ghcr-token', variable: 'GH_TOKEN')]) {
-                    sh 'echo $GH_TOKEN | docker login ghcr.io -u $GHCR_USER --password-stdin'
+                withCredentials([usernamePassword(
+                    credentialsId: 'ghcr-token',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh 'echo $DOCKER_PASS | docker login ghcr.io -u $DOCKER_USER --password-stdin'
                     sh "docker push ${IMAGE_BACKEND}:${IMAGE_TAG}"
                     sh "docker push ${IMAGE_BACKEND}:latest"
                     sh "docker push ${IMAGE_FRONTEND}:${IMAGE_TAG}"
@@ -73,6 +77,7 @@ pipeline {
                 }
             }
         }
+
 
         stage('Deploy to Kubernetes') {
             steps {
