@@ -93,17 +93,29 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 echo '☸️  Deploying to Kubernetes cluster...'
-                sh """
-                    # Use kubectl installed inside Jenkins container
-                    /var/jenkins_home/kubectl --kubeconfig=/var/jenkins_home/.kube/config version --client
+                withCredentials([usernamePassword(
+                    credentialsId: 'ghcr-credentials1',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh """
+                        # Create/update GHCR image pull secret in Kubernetes
+                        /var/jenkins_home/kubectl --kubeconfig=/var/jenkins_home/.kube/config \\
+                            create secret docker-registry ghcr-secret \\
+                            --docker-server=ghcr.io \\
+                            --docker-username=kanishkaa-15 \\
+                            --docker-password=\$DOCKER_PASS \\
+                            --dry-run=client -o yaml | \\
+                        /var/jenkins_home/kubectl --kubeconfig=/var/jenkins_home/.kube/config apply -f -
 
-                    (sed -i '' 's|school-ceo-backend:latest|${IMAGE_BACKEND}:${IMAGE_TAG}|g' k8s/backend.yaml 2>/dev/null) || sed -i 's|school-ceo-backend:latest|${IMAGE_BACKEND}:${IMAGE_TAG}|g' k8s/backend.yaml
-                    (sed -i '' 's|school-ceo-frontend:latest|${IMAGE_FRONTEND}:${IMAGE_TAG}|g' k8s/frontend.yaml 2>/dev/null) || sed -i 's|school-ceo-frontend:latest|${IMAGE_FRONTEND}:${IMAGE_TAG}|g' k8s/frontend.yaml
+                        (sed -i '' 's|school-ceo-backend:latest|${IMAGE_BACKEND}:${IMAGE_TAG}|g' k8s/backend.yaml 2>/dev/null) || sed -i 's|school-ceo-backend:latest|${IMAGE_BACKEND}:${IMAGE_TAG}|g' k8s/backend.yaml
+                        (sed -i '' 's|school-ceo-frontend:latest|${IMAGE_FRONTEND}:${IMAGE_TAG}|g' k8s/frontend.yaml 2>/dev/null) || sed -i 's|school-ceo-frontend:latest|${IMAGE_FRONTEND}:${IMAGE_TAG}|g' k8s/frontend.yaml
 
-                    /var/jenkins_home/kubectl --kubeconfig=/var/jenkins_home/.kube/config apply -f k8s/
-                    /var/jenkins_home/kubectl --kubeconfig=/var/jenkins_home/.kube/config rollout status deployment/backend  --timeout=120s
-                    /var/jenkins_home/kubectl --kubeconfig=/var/jenkins_home/.kube/config rollout status deployment/frontend --timeout=120s
-                """
+                        /var/jenkins_home/kubectl --kubeconfig=/var/jenkins_home/.kube/config apply -f k8s/
+                        /var/jenkins_home/kubectl --kubeconfig=/var/jenkins_home/.kube/config rollout status deployment/backend  --timeout=180s
+                        /var/jenkins_home/kubectl --kubeconfig=/var/jenkins_home/.kube/config rollout status deployment/frontend --timeout=180s
+                    """
+                }
             }
         }
 
