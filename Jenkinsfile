@@ -69,7 +69,7 @@ pipeline {
             steps {
                 echo '📤 Pushing images to GitHub Container Registry...'
                 withCredentials([usernamePassword(
-                    credentialsId: 'ghcr-token',
+                    credentialsId: 'ghcr-token1',
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
