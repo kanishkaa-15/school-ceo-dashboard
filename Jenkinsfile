@@ -94,10 +94,14 @@ pipeline {
             steps {
                 echo '☸️  Deploying to Kubernetes cluster...'
                 sh """
-                    (sed -i '' 's|school-ceo-backend:latest|${IMAGE_BACKEND}:${IMAGE_TAG}|g' k8s/backend.yaml 2>/dev/null) || \
-                    sed -i 's|school-ceo-backend:latest|${IMAGE_BACKEND}:${IMAGE_TAG}|g' k8s/backend.yaml
-                    (sed -i '' 's|school-ceo-frontend:latest|${IMAGE_FRONTEND}:${IMAGE_TAG}|g' k8s/frontend.yaml 2>/dev/null) || \
-                    sed -i 's|school-ceo-frontend:latest|${IMAGE_FRONTEND}:${IMAGE_TAG}|g' k8s/frontend.yaml
+                    export PATH=\$PATH:/opt/homebrew/bin:/usr/local/bin
+
+                    # Verify kubectl is accessible
+                    kubectl version --client || { echo '❌ kubectl not found in PATH'; exit 1; }
+
+                    (sed -i '' 's|school-ceo-backend:latest|${IMAGE_BACKEND}:${IMAGE_TAG}|g' k8s/backend.yaml 2>/dev/null) || sed -i 's|school-ceo-backend:latest|${IMAGE_BACKEND}:${IMAGE_TAG}|g' k8s/backend.yaml
+                    (sed -i '' 's|school-ceo-frontend:latest|${IMAGE_FRONTEND}:${IMAGE_TAG}|g' k8s/frontend.yaml 2>/dev/null) || sed -i 's|school-ceo-frontend:latest|${IMAGE_FRONTEND}:${IMAGE_TAG}|g' k8s/frontend.yaml
+
                     kubectl apply -f k8s/
                     kubectl rollout status deployment/backend  --timeout=120s
                     kubectl rollout status deployment/frontend --timeout=120s
