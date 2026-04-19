@@ -113,7 +113,7 @@ pipeline {
 
                         /var/jenkins_home/kubectl --kubeconfig=/var/jenkins_home/.kube/config apply -f k8s/
                         /var/jenkins_home/kubectl --kubeconfig=/var/jenkins_home/.kube/config rollout status deployment/backend  --timeout=180s
-                        /var/jenkins_home/kubectl --kubeconfig=/var/jenkins_home/.kube/config rollout status deployment/frontend --timeout=180s
+                        /var/jenkins_home/kubectl --kubeconfig=/var/jenkins_home/.kube/config rollout status deployment/frontend --timeout=300s
                     """
                 }
             }
