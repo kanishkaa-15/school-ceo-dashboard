@@ -14,7 +14,14 @@ pipeline {
         stage('Checkout') {
             steps {
                 echo '📥 Checking out source code...'
-                checkout scm
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/kanishkaa-15/school-ceo-dashboard.git',
+                        credentialsId: 'ghcr-token1'
+                    ]]
+                ])
             }
         }
 
