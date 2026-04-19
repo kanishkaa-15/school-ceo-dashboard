@@ -61,6 +61,10 @@ pipeline {
             }
         }
 
+        // Jenkins credential 'ghcr-token':
+        //   Type     : Username with password
+        //   Username : kanishkaa-15  (your exact GitHub username)
+        //   Password : <GitHub PAT with write:packages + read:packages scopes>
         stage('Docker Push') {
             steps {
                 echo '📤 Pushing images to GitHub Container Registry...'
@@ -69,7 +73,8 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    sh 'echo $DOCKER_PASS | docker login ghcr.io -u $DOCKER_USER --password-stdin'
+                    // Username hardcoded to kanishkaa-15 to avoid mismatch from credential field
+                    sh 'echo "$DOCKER_PASS" | docker login ghcr.io -u kanishkaa-15 --password-stdin'
                     sh "docker push ${IMAGE_BACKEND}:${IMAGE_TAG}"
                     sh "docker push ${IMAGE_BACKEND}:latest"
                     sh "docker push ${IMAGE_FRONTEND}:${IMAGE_TAG}"
@@ -78,14 +83,13 @@ pipeline {
             }
         }
 
-
         stage('Deploy to Kubernetes') {
             steps {
                 echo '☸️  Deploying to Kubernetes cluster...'
                 sh """
-                    sed -i '' 's|school-ceo-backend:latest|${IMAGE_BACKEND}:${IMAGE_TAG}|g' k8s/backend.yaml  2>/dev/null || \
+                    (sed -i '' 's|school-ceo-backend:latest|${IMAGE_BACKEND}:${IMAGE_TAG}|g' k8s/backend.yaml 2>/dev/null) || \
                     sed -i 's|school-ceo-backend:latest|${IMAGE_BACKEND}:${IMAGE_TAG}|g' k8s/backend.yaml
-                    sed -i '' 's|school-ceo-frontend:latest|${IMAGE_FRONTEND}:${IMAGE_TAG}|g' k8s/frontend.yaml 2>/dev/null || \
+                    (sed -i '' 's|school-ceo-frontend:latest|${IMAGE_FRONTEND}:${IMAGE_TAG}|g' k8s/frontend.yaml 2>/dev/null) || \
                     sed -i 's|school-ceo-frontend:latest|${IMAGE_FRONTEND}:${IMAGE_TAG}|g' k8s/frontend.yaml
                     kubectl apply -f k8s/
                     kubectl rollout status deployment/backend  --timeout=120s
