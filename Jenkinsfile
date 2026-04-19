@@ -15,26 +15,6 @@ pipeline {
             }
         }
 
-        stage('Install Dependencies') {
-            steps {
-                script {
-                    echo 'Installing Backend Dependencies...'
-                    dir('backend') {
-                        bat 'npm install'
-                    }
-                    echo 'Installing Frontend Dependencies...'
-                    bat 'npm install'
-                }
-            }
-        }
-
-        stage('Build Frontend') {
-            steps {
-                echo 'Building Next.js Frontend...'
-                bat 'npm run build'
-            }
-        }
-
         stage('Docker Build') {
             steps {
                 script {
