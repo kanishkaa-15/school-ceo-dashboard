@@ -13,7 +13,7 @@ export default function StaffBurnoutRadar() {
 
     // Generate mocked predictive burnout data based on the real staff list
     // We'll calculate a "risk score" deterministically based on string length of their name just to have stable mock data
-    const staffWithRisk = staff.map((s, index) => {
+    const staffWithRisk = (staff ?? []).map((s, index) => {
         // Deterministic pseudo-random Risk Score (0-100)
         const riskScore = ((s.name.length * 13) + (index * 27)) % 100
 
